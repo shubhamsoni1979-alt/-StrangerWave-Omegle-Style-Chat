@@ -48,6 +48,14 @@ export function useMatchmaking() {
     socket.on("partner-left", () => {
       webrtc.teardownPeerConnection();
       connectionStore.setPartnerLeft();
+
+      // Automatically re-queue after a brief delay so the user doesn't get stuck
+      // on the "Stranger disconnected" screen and can keep chatting.
+      setTimeout(() => {
+        if (connectionStore.status === "partner-left") {
+          findNext();
+        }
+      }, 1500);
     });
 
     socket.on("error-message", ({ message }) => {

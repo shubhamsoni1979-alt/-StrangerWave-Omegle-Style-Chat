@@ -176,7 +176,6 @@ export function useWebRTC() {
   }
 
   function teardownPeerConnection(): void {
-    peerConnection.value?.getSenders().forEach((sender) => sender.track?.stop());
     peerConnection.value?.close();
     peerConnection.value = null;
     remoteStream.value = null;
