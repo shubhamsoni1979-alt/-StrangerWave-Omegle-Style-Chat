@@ -1,0 +1,69 @@
+/**
+ * Shared types for the signaling/matchmaking server.
+ * Mirrors frontend/types/socket.ts so both sides agree on the contract.
+ */
+
+export interface SessionUser {
+  /** Socket.io socket id - used as the unique identity for the lifetime of a tab session */
+  socketId: string;
+  /** Id of the current chat room, if matched */
+  roomId: string | null;
+  /** Timestamp the user joined the waiting queue (ms epoch), null if not waiting */
+  queuedAt: number | null;
+  /** Last time we heard anything from this socket - used to evict stale sockets */
+  lastSeenAt: number;
+  /** Ids of partners already matched with in this session, to reduce immediate re-matching */
+  recentPartnerIds: Set<string>;
+}
+
+export interface ChatRoom {
+  id: string;
+  memberIds: [string, string];
+  createdAt: number;
+}
+
+/** Client -> Server events */
+export interface ClientToServerEvents {
+  "find-partner": () => void;
+  "next-partner": () => void;
+  "leave-chat": () => void;
+
+  offer: (payload: { sdp: RTCSessionDescriptionLike }) => void;
+  answer: (payload: { sdp: RTCSessionDescriptionLike }) => void;
+  "ice-candidate": (payload: { candidate: RTCIceCandidateLike }) => void;
+
+  "send-message": (payload: { text: string }) => void;
+  typing: (payload: { isTyping: boolean }) => void;
+
+  "report-partner": (payload: { reason: string }) => void;
+}
+
+/** Server -> Client events */
+export interface ServerToClientEvents {
+  "queue-joined": () => void;
+  "partner-found": (payload: { roomId: string; initiator: boolean }) => void;
+  "partner-left": (payload: { reason: "next" | "disconnect" | "left" | "report" }) => void;
+
+  offer: (payload: { sdp: RTCSessionDescriptionLike }) => void;
+  answer: (payload: { sdp: RTCSessionDescriptionLike }) => void;
+  "ice-candidate": (payload: { candidate: RTCIceCandidateLike }) => void;
+
+  "receive-message": (payload: { text: string; at: number }) => void;
+  typing: (payload: { isTyping: boolean }) => void;
+
+  "rate-limited": (payload: { event: string; retryAfterMs: number }) => void;
+  "error-message": (payload: { message: string }) => void;
+}
+
+/** Minimal shape we accept over the wire - avoids depending on DOM lib types in a Node project */
+export interface RTCSessionDescriptionLike {
+  type: "offer" | "answer" | "pranswer" | "rollback";
+  sdp?: string;
+}
+
+export interface RTCIceCandidateLike {
+  candidate: string;
+  sdpMid?: string | null;
+  sdpMLineIndex?: number | null;
+  usernameFragment?: string | null;
+}
