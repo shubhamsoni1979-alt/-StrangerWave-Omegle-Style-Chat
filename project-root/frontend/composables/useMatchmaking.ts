@@ -17,6 +17,14 @@ export function useMatchmaking() {
     if (listenersBound) return;
     const socket = connect();
 
+    socket.on("connect", () => {
+      // Re-enqueue automatically on connect/reconnect if we were searching in the UI.
+      // This prevents the user from being dropped from the queue silently during connection hops or transport fallbacks.
+      if (connectionStore.status === "queued") {
+        socket.emit("find-partner");
+      }
+    });
+
     socket.on("queue-joined", () => {
       connectionStore.setQueued();
     });

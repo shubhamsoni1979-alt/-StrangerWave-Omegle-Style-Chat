@@ -30,7 +30,6 @@ export function useSocket() {
       socketInstance ??
       io(url, {
         autoConnect: false,
-        transports: ["websocket", "polling"],
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 1000,
