@@ -14,6 +14,7 @@ export interface IceServerConfig {
 export function getIceServers(): IceServerConfig[] {
   const servers: IceServerConfig[] = [
     { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:openrelay.metered.ca:80" },
   ];
 
   const turnServer = process.env.TURN_SERVER?.trim();
@@ -25,6 +26,16 @@ export function getIceServers(): IceServerConfig[] {
       urls: turnServer,
       username: turnUsername,
       credential: turnPassword,
+    });
+  } else {
+    // Free public TURN fallback from OpenRelayProject to allow different-network traversal
+    servers.push({
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443"
+      ],
+      username: "openrelayproject",
+      credential: "openrelayproject",
     });
   }
 

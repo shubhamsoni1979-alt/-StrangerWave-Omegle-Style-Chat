@@ -95,8 +95,17 @@ export function useWebRTC() {
     }
 
     pc.ontrack = (event) => {
-      if (!remoteStream.value) remoteStream.value = new MediaStream();
-      remoteStream.value.addTrack(event.track);
+      const incomingStream = event.streams[0] || new MediaStream([event.track]);
+      if (!remoteStream.value) {
+        remoteStream.value = incomingStream;
+      } else {
+        const currentTracks = remoteStream.value.getTracks();
+        if (!currentTracks.some((t) => t.id === event.track.id)) {
+          remoteStream.value.addTrack(event.track);
+        }
+        // Force shallowRef update so Vue's watcher in RemoteVideo.vue is triggered
+        remoteStream.value = new MediaStream(remoteStream.value.getTracks());
+      }
     };
 
     pc.onicecandidate = (event) => {
