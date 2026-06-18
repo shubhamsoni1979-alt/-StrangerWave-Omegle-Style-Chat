@@ -86,6 +86,7 @@ export function useMatchmaking() {
     bindListeners();
     const socket = connect();
     socket.emit("find-partner");
+    connectionStore.setQueued();
   }
 
   function findNext(): void {
@@ -93,6 +94,7 @@ export function useMatchmaking() {
     chatStore.clear();
     const socket = connect();
     socket.emit("next-partner");
+    connectionStore.setQueued();
   }
 
   function endChat(): void {
