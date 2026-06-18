@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from "vue";
+import { onMounted, onBeforeUnmount, ref } from "vue";
 import { useConnectionStore } from "~/stores/connection";
 import { useChatStore } from "~/stores/chat";
 import { useUserStore } from "~/stores/user";
@@ -14,7 +14,12 @@ const matchmaking = useMatchmaking();
 const localStream = matchmaking.localStream;
 const remoteStream = matchmaking.remoteStream;
 
+const isDev = ref(false);
+
 onMounted(async () => {
+  if (typeof window !== "undefined") {
+    isDev.value = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  }
   if (!userStore.hasAcceptedTerms) {
     router.replace("/");
     return;
@@ -168,6 +173,7 @@ function simulateBotReply(userText: string): void {
             Report
           </UButton>
           <UButton
+            v-if="isDev"
             color="amber"
             variant="soft"
             icon="i-heroicons-beaker"
