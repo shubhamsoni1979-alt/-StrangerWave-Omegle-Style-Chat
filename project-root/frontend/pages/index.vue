@@ -7,13 +7,7 @@ const agreedToAge = ref(false);
 const agreedToRules = ref(false);
 
 const canEnter = computed(() => agreedToAge.value && agreedToRules.value);
-
-function enterChat(): void {
-  if (!canEnter.value) return;
-  userStore.acceptTerms();
-  router.push("/chat");
-}
-</script>
+ipt>
 
 <template>
   <main class="flex min-h-screen flex-col items-center justify-center bg-neutral-950 px-4 py-12 text-neutral-100">
