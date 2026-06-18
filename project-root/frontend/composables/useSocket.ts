@@ -16,9 +16,14 @@ export function useSocket() {
   function connect(): AppSocket {
     if (socketInstance?.connected) return socketInstance;
 
+    let url = config.public.backendUrl;
+    if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+      url = `https://${url}`;
+    }
+
     socketInstance =
       socketInstance ??
-      io(config.public.backendUrl, {
+      io(url, {
         autoConnect: false,
         transports: ["websocket", "polling"],
         reconnection: true,

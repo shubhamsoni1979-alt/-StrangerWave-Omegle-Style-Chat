@@ -34,8 +34,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // Where the Socket.io / signaling server lives. Override via
-      // NUXT_PUBLIC_BACKEND_URL in production.
-      backendUrl: "http://localhost:3001",
+      // NUXT_PUBLIC_SOCKET_URL or NUXT_PUBLIC_BACKEND_URL in production.
+      backendUrl: process.env.NUXT_PUBLIC_SOCKET_URL ?? process.env.NUXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001",
     },
   },
 

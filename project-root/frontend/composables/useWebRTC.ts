@@ -18,9 +18,13 @@ export function useWebRTC() {
   let hasRemoteDescription = false;
 
   async function fetchIceServers(): Promise<IceServerConfig[]> {
+    let url = config.public.backendUrl;
+    if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+      url = `https://${url}`;
+    }
     try {
       const res = await $fetch<{ iceServers: IceServerConfig[] }>("/api/ice-servers", {
-        baseURL: config.public.backendUrl,
+        baseURL: url,
       });
       return res.iceServers;
     } catch {

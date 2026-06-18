@@ -11,12 +11,20 @@ import type { ClientToServerEvents, ServerToClientEvents } from "./types";
 const PORT = Number(process.env.PORT ?? 3001);
 const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://stranger-wave-omegle-style-chat.vercel.app",
+  FRONTEND_URL
+];
+const uniqueOrigins = Array.from(new Set(allowedOrigins.filter(Boolean)));
+
 const app = express();
 
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: uniqueOrigins,
     methods: ["GET", "POST"],
+    credentials: true,
   })
 );
 app.use(express.json({ limit: "10kb" }));
@@ -35,8 +43,9 @@ const httpServer = createServer(app);
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: FRONTEND_URL,
+    origin: uniqueOrigins,
     methods: ["GET", "POST"],
+    credentials: true,
   },
   // Generous but bounded - prevents a single hung connection from lingering forever.
   pingTimeout: 20_000,
