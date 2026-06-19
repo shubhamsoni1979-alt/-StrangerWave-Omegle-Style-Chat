@@ -85,7 +85,7 @@ export function useWebRTC() {
     throw lastError || new Error("No media devices available");
   }
 
-  async function createPeerConnection(): Promise<RTCPeerConnection> {
+  async function createPeerConnection(onFailed?: () => void): Promise<RTCPeerConnection> {
     const iceServers = await fetchIceServers();
     const pc = new RTCPeerConnection({ iceServers });
 
@@ -118,6 +118,11 @@ export function useWebRTC() {
       const connectionStore = useConnectionStore();
       if (pc.connectionState === "connected") {
         connectionStore.setConnected();
+      } else if (
+        pc.connectionState === "failed" ||
+        pc.connectionState === "disconnected"
+      ) {
+        onFailed?.();
       }
     };
 

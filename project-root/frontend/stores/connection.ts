@@ -9,7 +9,6 @@ export const useConnectionStore = defineStore("connection", {
     errorMessage: null as string | null,
     /** How many strangers this tab has talked to this session - purely cosmetic. */
     strangerCount: 0,
-    isBotMode: false,
   }),
 
   getters: {
@@ -27,14 +26,6 @@ export const useConnectionStore = defineStore("connection", {
       this.isInitiator = isInitiator;
       this.status = "matched";
       this.strangerCount += 1;
-      this.isBotMode = false;
-    },
-    setBotMatched() {
-      this.roomId = "bot-room";
-      this.isInitiator = false;
-      this.status = "connected";
-      this.isBotMode = true;
-      this.strangerCount += 1;
     },
     setConnected() {
       this.status = "connected";
@@ -43,24 +34,20 @@ export const useConnectionStore = defineStore("connection", {
       this.roomId = null;
       this.isInitiator = false;
       this.status = "partner-left";
-      this.isBotMode = false;
     },
     setQueued() {
       this.roomId = null;
       this.status = "queued";
-      this.isBotMode = false;
     },
     setError(message: string) {
       this.errorMessage = message;
       this.status = "error";
-      this.isBotMode = false;
     },
     reset() {
       this.status = "idle";
       this.roomId = null;
       this.isInitiator = false;
       this.errorMessage = null;
-      this.isBotMode = false;
     },
   },
 });

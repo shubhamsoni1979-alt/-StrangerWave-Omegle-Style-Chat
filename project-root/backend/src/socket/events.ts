@@ -50,9 +50,8 @@ export function registerSocketServer(io: AppServer): void {
   /** Backstop sweep: in case a queued partner only becomes matchable later
    *  (e.g. the only other waiting user was their immediate last partner). */
   const matchSweep = setInterval(() => {
-    for (const socketId of [...users.keys()]) {
-      const user = users.get(socketId);
-      if (!user || user.queuedAt === null) continue;
+    const queuedIds = matchmaker.getQueueSnapshot();
+    for (const socketId of queuedIds) {
       const socket = io.sockets.sockets.get(socketId) as AppSocket | undefined;
       if (socket) tryMatchFor(socket);
     }

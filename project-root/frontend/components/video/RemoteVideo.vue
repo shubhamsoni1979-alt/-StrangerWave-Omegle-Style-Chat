@@ -5,7 +5,6 @@ const props = defineProps<{
   stream: MediaStream | null;
   isConnected: boolean;
   isSearching: boolean;
-  isBotMode?: boolean;
 }>();
 
 import { toRaw } from "vue";
@@ -42,9 +41,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-neutral-900 ring-1 ring-white/10">
-    <video v-if="!isBotMode" ref="videoEl" autoplay playsinline class="h-full w-full object-cover"
-      :class="{ 'opacity-0': !isConnected }" />
-    <img v-else src="/public/bot-avatar.png" alt="Bot Avatar" class="h-full w-full object-cover"
+    <video ref="videoEl" autoplay playsinline class="h-full w-full object-cover"
       :class="{ 'opacity-0': !isConnected }" />
 
     <div v-if="!isConnected" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-neutral-300">
@@ -57,7 +54,7 @@ onBeforeUnmount(() => {
 
     <span v-if="isConnected"
       class="absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-xs font-medium text-white/90">
-      {{ isBotMode ? "WaveBot" : "Stranger" }}
+      Stranger
     </span>
   </div>
 </template>

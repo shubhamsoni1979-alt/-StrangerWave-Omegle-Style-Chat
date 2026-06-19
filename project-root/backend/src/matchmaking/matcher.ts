@@ -38,6 +38,10 @@ export class Matchmaker {
     return this.queue.size();
   }
 
+  getQueueSnapshot(): readonly string[] {
+    return this.queue.snapshot();
+  }
+
   getRoom(roomId: string): ChatRoom | undefined {
     return this.rooms.get(roomId);
   }
@@ -69,7 +73,10 @@ export class Matchmaker {
     // starvation when the pool of online strangers is small).
     let chosen: string | undefined;
     for (const candidateId of candidates) {
-      if (!isSocketLive(candidateId)) continue; // skip stale/disconnected entries
+      if (!isSocketLive(candidateId)) {
+        this.queue.remove(candidateId);
+        continue; // skip stale/disconnected entries and clean them up
+      }
       const candidateUser = getUser(candidateId);
       const wasRecentPartner = self?.recentPartnerIds.has(candidateId) ?? false;
       if (!wasRecentPartner) {

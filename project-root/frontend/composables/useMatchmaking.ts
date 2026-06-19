@@ -1,3 +1,4 @@
+import { watch } from "vue";
 import { useConnectionStore } from "~/stores/connection";
 import { useChatStore } from "~/stores/chat";
 import { useUserStore } from "~/stores/user";
@@ -12,43 +13,38 @@ export function useMatchmaking() {
   const userStore = useUserStore();
 
   let listenersBound = false;
-  let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+  let connectionTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  function startSearchingTimer(): void {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      if (connectionStore.status === "queued") {
-        startBotSimulation();
+  // Automatically clear the negotiation timeout when connected
+  watch(
+    () => connectionStore.status,
+    (status) => {
+      if (status === "connected") {
+        clearConnectionTimeout();
       }
-    }, 5000);
+    }
+  );
+
+  function startConnectionTimeout(): void {
+    clearConnectionTimeout();
+    connectionTimeout = setTimeout(() => {
+      if (connectionStore.status === "matched") {
+        console.warn("WebRTC connection negotiation timed out. Finding next partner.");
+        findNext();
+      }
+    }, 10000); // 10s negotiation limit
   }
 
-  function startBotSimulation(): void {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-      searchTimeout = null;
+  function clearConnectionTimeout(): void {
+    if (connectionTimeout) {
+      clearTimeout(connectionTimeout);
+      connectionTimeout = null;
     }
-    // Leave the backend queue
-    const socket = connect();
-    socket.emit("leave-chat");
+  }
 
-    chatStore.clear();
-    connectionStore.setBotMatched();
-    webrtc.remoteStream.value = null;
-
-    setTimeout(() => {
-      chatStore.setStrangerTyping(true);
-    }, 1000);
-
-    setTimeout(() => {
-      chatStore.setStrangerTyping(false);
-      chatStore.addMessage({
-        id: `mock-1-${Date.now()}`,
-        text: "Hello there! I am WaveBot, your simulated companion. How can I help you today? 🤖",
-        at: Date.now(),
-        from: "stranger"
-      });
-    }, 3000);
+  function handleConnectionFailure(): void {
+    console.warn("WebRTC connection failed or disconnected. Finding next partner.");
+    findNext();
   }
 
   function bindListeners(): void {
@@ -68,16 +64,21 @@ export function useMatchmaking() {
     });
 
     socket.on("partner-found", async ({ roomId, initiator }) => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-        searchTimeout = null;
-      }
       chatStore.clear();
       connectionStore.setMatched(roomId, initiator);
-      await webrtc.createPeerConnection();
-      webrtc.setCameraEnabled(userStore.isCameraOn);
-      webrtc.setMicEnabled(userStore.isMicOn);
-      if (initiator) await webrtc.makeOffer();
+      startConnectionTimeout();
+
+      try {
+        await webrtc.createPeerConnection(() => {
+          handleConnectionFailure();
+        });
+        webrtc.setCameraEnabled(userStore.isCameraOn);
+        webrtc.setMicEnabled(userStore.isMicOn);
+        if (initiator) await webrtc.makeOffer();
+      } catch (err) {
+        console.error("Failed to establish WebRTC connection:", err);
+        findNext();
+      }
     });
 
     socket.on("offer", async ({ sdp }) => {
@@ -129,23 +130,19 @@ export function useMatchmaking() {
     const socket = connect();
     socket.emit("find-partner");
     connectionStore.setQueued();
-    startSearchingTimer();
   }
 
   function findNext(): void {
+    clearConnectionTimeout();
     webrtc.teardownPeerConnection();
     chatStore.clear();
     const socket = connect();
     socket.emit("next-partner");
     connectionStore.setQueued();
-    startSearchingTimer();
   }
 
   function endChat(): void {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-      searchTimeout = null;
-    }
+    clearConnectionTimeout();
     webrtc.teardownPeerConnection();
     webrtc.stopLocalMedia();
     chatStore.clear();
@@ -156,10 +153,7 @@ export function useMatchmaking() {
   }
 
   function reportPartner(reason: string): void {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-      searchTimeout = null;
-    }
+    clearConnectionTimeout();
     const socket = connect();
     socket.emit("report-partner", { reason });
     webrtc.teardownPeerConnection();
@@ -171,7 +165,6 @@ export function useMatchmaking() {
     findNext,
     endChat,
     reportPartner,
-    startBotSimulation,
     sendMessage: chat.sendMessage,
     notifyTyping: chat.notifyTyping,
   };
