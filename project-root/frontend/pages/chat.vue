@@ -64,7 +64,7 @@ function handleSendMessage(text: string): void {
 </script>
 
 <template>
-  <main class="flex h-screen h-[100dvh] flex-col bg-neutral-950 text-neutral-100 overflow-hidden">
+  <main class="flex flex-col bg-neutral-950 text-neutral-100 overflow-hidden" style="height: var(--vh, 100vh);">
     <header class="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0">
       <h1 class="text-base font-semibold">
         Stranger<span class="text-primary-400">Wave</span>

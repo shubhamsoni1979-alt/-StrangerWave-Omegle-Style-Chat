@@ -83,7 +83,7 @@ function copyRoomCode() {
 </script>
 
 <template>
-  <main class="flex h-screen h-[100dvh] flex-col bg-neutral-950 text-neutral-100 overflow-hidden font-sans">
+  <main class="flex flex-col bg-neutral-950 text-neutral-100 overflow-hidden font-sans" style="height: var(--vh, 100vh);">
     <!-- Header -->
     <header class="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0">
       <h1 class="text-base font-semibold">
@@ -147,7 +147,7 @@ function copyRoomCode() {
     <!-- Active Call View -->
     <div v-else class="flex flex-col flex-1 min-h-0 gap-4 p-4 lg:grid lg:grid-cols-[1fr_360px] lg:h-[calc(100vh-60px)] lg:min-h-0 lg:overflow-hidden">
       <!-- Video Grid Section -->
-      <section class="flex flex-col gap-3 min-h-0 shrink-0 h-[45dvh] sm:h-[50dvh] lg:h-full lg:min-h-0 lg:flex-1">
+      <section class="flex flex-col gap-3 min-h-0 shrink-0 h-[28dvh] sm:h-[35dvh] lg:h-full lg:min-h-0 lg:flex-1">
         <!-- 4-Video layout grid -->
         <div class="grid grid-cols-2 grid-rows-2 gap-3 flex-1 min-h-0">
           <!-- Local video -->

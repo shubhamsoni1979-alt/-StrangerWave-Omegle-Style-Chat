@@ -19,6 +19,11 @@ export function useGroupWebRTC() {
   const messages = ref<{ id: string; fromUserId: string; text: string; at: number; isMe: boolean }[]>([]);
   const connectionError = ref<string | null>(null);
 
+  // Maps peer socketId to array of pending ICE candidates
+  const pendingCandidatesMap = new Map<string, RTCIceCandidateLike[]>();
+  // Maps peer socketId to boolean indicating if remote description is set
+  const hasRemoteDescMap = new Map<string, boolean>();
+
   // Helper: fetch ICE servers configuration from backend
   async function fetchIceServers(): Promise<IceServerConfig[]> {
     let url = config.public.backendUrl;
@@ -90,6 +95,9 @@ export function useGroupWebRTC() {
       peerConnections.delete(targetSocketId);
     }
 
+    pendingCandidatesMap.set(targetSocketId, []);
+    hasRemoteDescMap.set(targetSocketId, false);
+
     const iceServers = await fetchIceServers();
     const pc = new RTCPeerConnection({ iceServers });
 
@@ -149,6 +157,22 @@ export function useGroupWebRTC() {
       remoteStreams.value.delete(socketId);
       remoteStreams.value = new Map(remoteStreams.value);
     }
+    pendingCandidatesMap.delete(socketId);
+    hasRemoteDescMap.delete(socketId);
+  }
+
+  async function flushPendingCandidates(targetSocketId: string): Promise<void> {
+    const pc = peerConnections.get(targetSocketId);
+    if (!pc) return;
+    const candidates = pendingCandidatesMap.get(targetSocketId) || [];
+    for (const candidate of candidates) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.warn(`Failed to add flushed candidate for ${targetSocketId}:`, err);
+      }
+    }
+    pendingCandidatesMap.set(targetSocketId, []);
   }
 
   // Initialize socket and bind events
@@ -222,6 +246,9 @@ export function useGroupWebRTC() {
       try {
         const pc = await createPeerConnection(payload.from, false);
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        hasRemoteDescMap.set(payload.from, true);
+        await flushPendingCandidates(payload.from);
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
@@ -239,6 +266,8 @@ export function useGroupWebRTC() {
         const pc = peerConnections.get(payload.from);
         if (pc) {
           await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+          hasRemoteDescMap.set(payload.from, true);
+          await flushPendingCandidates(payload.from);
         }
       } catch (err) {
         console.error("Error handling group answer:", err);
@@ -249,6 +278,13 @@ export function useGroupWebRTC() {
       try {
         const pc = peerConnections.get(payload.from);
         if (pc) {
+          if (!hasRemoteDescMap.get(payload.from)) {
+            if (!pendingCandidatesMap.has(payload.from)) {
+              pendingCandidatesMap.set(payload.from, []);
+            }
+            pendingCandidatesMap.get(payload.from)!.push(payload.candidate);
+            return;
+          }
           await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
         }
       } catch (err) {
