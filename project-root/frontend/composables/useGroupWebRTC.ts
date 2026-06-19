@@ -8,8 +8,8 @@ export function useGroupWebRTC() {
   const { connect, disconnect, getSocket } = useSocket();
 
   const localStream = shallowRef<MediaStream | null>(null);
-  // Map of peer socketId to MediaStream
-  const remoteStreams = ref<Map<string, MediaStream>>(new Map());
+  // Record of peer socketId to MediaStream
+  const remoteStreams = ref<Record<string, MediaStream>>({});
   // Map of peer socketId to RTCPeerConnection
   const peerConnections = new Map<string, RTCPeerConnection>();
   
@@ -95,7 +95,9 @@ export function useGroupWebRTC() {
       peerConnections.delete(targetSocketId);
     }
 
-    pendingCandidatesMap.set(targetSocketId, []);
+    if (!pendingCandidatesMap.has(targetSocketId)) {
+      pendingCandidatesMap.set(targetSocketId, []);
+    }
     hasRemoteDescMap.set(targetSocketId, false);
 
     const iceServers = await fetchIceServers();
@@ -111,19 +113,19 @@ export function useGroupWebRTC() {
     // Handle incoming stream from this peer
     pc.ontrack = (event) => {
       const incomingStream = event.streams[0] || new MediaStream([event.track]);
-      const existingStream = remoteStreams.value.get(targetSocketId);
+      const existingStream = remoteStreams.value[targetSocketId];
       if (!existingStream) {
-        remoteStreams.value.set(targetSocketId, incomingStream);
+        remoteStreams.value[targetSocketId] = incomingStream;
       } else {
         const currentTracks = existingStream.getTracks();
         if (!currentTracks.some((t) => t.id === event.track.id)) {
           existingStream.addTrack(event.track);
         }
         // Force trigger reactivity by setting a new MediaStream instance with all tracks
-        remoteStreams.value.set(targetSocketId, new MediaStream(existingStream.getTracks()));
+        remoteStreams.value[targetSocketId] = new MediaStream(existingStream.getTracks());
       }
-      // Force trigger Vue reactivity by creating a new Map reference
-      remoteStreams.value = new Map(remoteStreams.value);
+      // Force trigger Vue reactivity by creating a new object reference
+      remoteStreams.value = { ...remoteStreams.value };
     };
 
     // Send local ICE candidates to this specific peer
@@ -153,9 +155,9 @@ export function useGroupWebRTC() {
       peerConnections.get(socketId)?.close();
       peerConnections.delete(socketId);
     }
-    if (remoteStreams.value.has(socketId)) {
-      remoteStreams.value.delete(socketId);
-      remoteStreams.value = new Map(remoteStreams.value);
+    if (socketId in remoteStreams.value) {
+      delete remoteStreams.value[socketId];
+      remoteStreams.value = { ...remoteStreams.value };
     }
     pendingCandidatesMap.delete(socketId);
     hasRemoteDescMap.delete(socketId);
@@ -244,6 +246,11 @@ export function useGroupWebRTC() {
     // WebRTC signaling relays
     socket.on("group-offer", async (payload: { from: string; sdp: RTCSessionDescriptionLike }) => {
       try {
+        // Ensure local media is ready before setting up peer connection
+        if (!localStream.value) {
+          await requestLocalMedia();
+        }
+
         const pc = await createPeerConnection(payload.from, false);
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
         hasRemoteDescMap.set(payload.from, true);
@@ -263,6 +270,11 @@ export function useGroupWebRTC() {
 
     socket.on("group-answer", async (payload: { from: string; sdp: RTCSessionDescriptionLike }) => {
       try {
+        // Ensure local media is ready
+        if (!localStream.value) {
+          await requestLocalMedia();
+        }
+
         const pc = peerConnections.get(payload.from);
         if (pc) {
           await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
@@ -350,7 +362,7 @@ export function useGroupWebRTC() {
     roomCode.value = "";
     participants.value = [];
     messages.value = [];
-    remoteStreams.value = new Map();
+    remoteStreams.value = {};
   }
 
   function sendGroupMessage(text: string) {

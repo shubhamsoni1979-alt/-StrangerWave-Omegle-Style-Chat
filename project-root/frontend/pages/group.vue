@@ -161,7 +161,7 @@ function copyRoomCode() {
           <!-- Remote videos -->
           <template v-for="peer in groupCall.participants.value" :key="peer.socketId">
             <GroupVideo
-              :stream="groupCall.remoteStreams.value.get(peer.socketId) || null"
+              :stream="groupCall.remoteStreams.value[peer.socketId] || null"
               :label="`User ${peer.userId}`"
               class="w-full h-full object-cover"
             />
