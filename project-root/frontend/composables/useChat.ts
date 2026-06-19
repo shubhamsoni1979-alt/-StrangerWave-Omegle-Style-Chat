@@ -13,6 +13,10 @@ export function useChat() {
     if (listenersBound) return;
     const socket = connect();
 
+    // Remove any existing listeners first to prevent duplicates
+    socket.off("receive-message");
+    socket.off("typing");
+
     // The server only ever forwards this event to the *other* member of the
     // room (see backend/src/socket/chat.ts), so every message we receive
     // here came from the stranger, never an echo of our own.

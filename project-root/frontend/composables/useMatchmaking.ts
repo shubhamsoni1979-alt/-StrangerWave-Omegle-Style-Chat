@@ -51,6 +51,17 @@ export function useMatchmaking() {
     if (listenersBound) return;
     const socket = connect();
 
+    // Clean up any existing listeners on these events first to avoid duplicates
+    socket.off("connect");
+    socket.off("queue-joined");
+    socket.off("partner-found");
+    socket.off("offer");
+    socket.off("answer");
+    socket.off("ice-candidate");
+    socket.off("partner-left");
+    socket.off("error-message");
+    socket.off("rate-limited");
+
     socket.on("connect", () => {
       // Re-enqueue automatically on connect/reconnect if we were searching in the UI.
       // This prevents the user from being dropped from the queue silently during connection hops or transport fallbacks.
@@ -148,6 +159,22 @@ export function useMatchmaking() {
     chatStore.clear();
     const socket = connect();
     socket.emit("leave-chat");
+
+    // Clean up event listeners for this page to prevent duplicates on next visit
+    socket.off("connect");
+    socket.off("queue-joined");
+    socket.off("partner-found");
+    socket.off("offer");
+    socket.off("answer");
+    socket.off("ice-candidate");
+    socket.off("partner-left");
+    socket.off("error-message");
+    socket.off("rate-limited");
+    
+    // Also clean up useChat listeners
+    socket.off("receive-message");
+    socket.off("typing");
+
     disconnect();
     connectionStore.reset();
   }

@@ -64,8 +64,8 @@ function handleSendMessage(text: string): void {
 </script>
 
 <template>
-  <main class="flex min-h-screen flex-col bg-neutral-950 text-neutral-100">
-    <header class="flex items-center justify-between border-b border-white/10 px-4 py-3">
+  <main class="flex h-screen h-[100dvh] flex-col bg-neutral-950 text-neutral-100 overflow-hidden">
+    <header class="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0">
       <h1 class="text-base font-semibold">
         Stranger<span class="text-primary-400">Wave</span>
       </h1>
@@ -75,15 +75,16 @@ function handleSendMessage(text: string): void {
       </div>
     </header>
 
-    <div class="grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_360px] lg:h-[calc(100vh-60px)] lg:min-h-0 lg:overflow-hidden">
-      <section class="flex flex-col gap-4 lg:h-full lg:min-h-0">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:min-h-0">
+    <div class="flex flex-col flex-1 min-h-0 gap-4 p-4 lg:grid lg:grid-cols-[1fr_360px] lg:h-[calc(100vh-60px)] lg:min-h-0 lg:overflow-hidden">
+      <section class="flex flex-col gap-3 min-h-0 shrink-0 h-[45dvh] sm:h-[50dvh] lg:h-full lg:min-h-0 lg:flex-1">
+        <div class="grid grid-cols-2 gap-3 flex-1 min-h-0">
           <RemoteVideo
             :stream="remoteStream"
             :is-connected="connectionStore.isConnected"
             :is-searching="connectionStore.isSearching"
+            class="h-full min-h-0"
           />
-          <LocalVideo :stream="localStream" :camera-on="userStore.isCameraOn" />
+          <LocalVideo :stream="localStream" :camera-on="userStore.isCameraOn" class="h-full min-h-0" />
         </div>
 
         <div class="flex flex-wrap items-center justify-center gap-3 rounded-xl bg-neutral-900/60 p-3 ring-1 ring-white/10 shrink-0">
@@ -111,7 +112,7 @@ function handleSendMessage(text: string): void {
         </div>
       </section>
 
-      <section class="min-h-[320px] lg:min-h-0 lg:h-full">
+      <section class="flex-1 min-h-0 lg:h-full">
         <ChatBox
           :messages="chatStore.messages"
           :stranger-is-typing="chatStore.strangerIsTyping"

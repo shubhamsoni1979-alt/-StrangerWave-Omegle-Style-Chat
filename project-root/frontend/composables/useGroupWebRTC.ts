@@ -44,21 +44,42 @@ export function useGroupWebRTC() {
   async function requestLocalMedia(): Promise<MediaStream> {
     if (localStream.value) return localStream.value;
 
-    const constraints = {
-      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: { echoCancellation: true, noiseSuppression: true },
-    };
+    const constraintsList = [
+      // 1. Try high-quality video & audio
+      {
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      },
+      // 2. Fallback to basic video & audio
+      {
+        video: true,
+        audio: true,
+      },
+      // 3. Fallback to video only
+      {
+        video: true,
+        audio: false,
+      },
+      // 4. Fallback to audio only
+      {
+        video: false,
+        audio: true,
+      }
+    ];
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      localStream.value = stream;
-      return stream;
-    } catch (err) {
-      console.warn("getUserMedia failed, trying basic video/audio:", err);
-      const basicStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStream.value = basicStream;
-      return basicStream;
+    let lastError: any = null;
+    for (const constraints of constraintsList) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        localStream.value = stream;
+        return stream;
+      } catch (err) {
+        lastError = err;
+        console.warn("Group getUserMedia failed for constraints:", constraints, err);
+      }
     }
+
+    throw lastError || new Error("No media devices available");
   }
 
   // Create a peer connection for a specific remote member in the group
@@ -82,7 +103,17 @@ export function useGroupWebRTC() {
     // Handle incoming stream from this peer
     pc.ontrack = (event) => {
       const incomingStream = event.streams[0] || new MediaStream([event.track]);
-      remoteStreams.value.set(targetSocketId, incomingStream);
+      const existingStream = remoteStreams.value.get(targetSocketId);
+      if (!existingStream) {
+        remoteStreams.value.set(targetSocketId, incomingStream);
+      } else {
+        const currentTracks = existingStream.getTracks();
+        if (!currentTracks.some((t) => t.id === event.track.id)) {
+          existingStream.addTrack(event.track);
+        }
+        // Force trigger reactivity by setting a new MediaStream instance with all tracks
+        remoteStreams.value.set(targetSocketId, new MediaStream(existingStream.getTracks()));
+      }
       // Force trigger Vue reactivity by creating a new Map reference
       remoteStreams.value = new Map(remoteStreams.value);
     };
@@ -123,6 +154,18 @@ export function useGroupWebRTC() {
   // Initialize socket and bind events
   function initSocket() {
     const socket = connect();
+
+    // Clean up any existing listeners on these events first to avoid duplicates
+    socket.off("user-id");
+    socket.off("incoming-group-call");
+    socket.off("group-room-members");
+    socket.off("user-joined-group");
+    socket.off("user-left-group");
+    socket.off("group-offer");
+    socket.off("group-answer");
+    socket.off("group-ice-candidate");
+    socket.off("receive-group-message");
+    socket.off("error-message");
 
     // Listen for our User ID assigned by the server
     socket.on("user-id", (payload: { userId: string }) => {
@@ -293,6 +336,21 @@ export function useGroupWebRTC() {
     leaveRoom();
     localStream.value?.getTracks().forEach((track) => track.stop());
     localStream.value = null;
+
+    const socket = getSocket();
+    if (socket) {
+      socket.off("user-id");
+      socket.off("incoming-group-call");
+      socket.off("group-room-members");
+      socket.off("user-joined-group");
+      socket.off("user-left-group");
+      socket.off("group-offer");
+      socket.off("group-answer");
+      socket.off("group-ice-candidate");
+      socket.off("receive-group-message");
+      socket.off("error-message");
+    }
+
     disconnect();
   }
 

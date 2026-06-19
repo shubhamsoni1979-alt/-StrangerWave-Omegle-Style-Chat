@@ -39,7 +39,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-neutral-900 ring-1 ring-white/10">
+  <div class="relative w-full h-full overflow-hidden rounded-xl bg-neutral-900 ring-1 ring-white/10">
     <video
       ref="videoEl"
       autoplay

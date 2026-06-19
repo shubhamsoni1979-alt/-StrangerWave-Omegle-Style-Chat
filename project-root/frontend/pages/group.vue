@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useGroupWebRTC } from "~/composables/useGroupWebRTC";
 import { useUserStore } from "~/stores/user";
 
@@ -11,6 +11,18 @@ const groupCall = useGroupWebRTC();
 const friendIdOrCode = ref("");
 const chatInput = ref("");
 const activeTab = ref("chat"); // or participants
+
+const messagesEl = ref<HTMLDivElement | null>(null);
+
+watch(
+  () => [groupCall.messages.value.length, activeTab.value],
+  async () => {
+    await nextTick();
+    if (messagesEl.value) {
+      messagesEl.value.scrollTo({ top: messagesEl.value.scrollHeight, behavior: "smooth" });
+    }
+  }
+);
 
 const isCameraOn = ref(true);
 const isMicOn = ref(true);
@@ -71,7 +83,7 @@ function copyRoomCode() {
 </script>
 
 <template>
-  <main class="flex min-h-screen flex-col bg-neutral-950 text-neutral-100 font-sans">
+  <main class="flex h-screen h-[100dvh] flex-col bg-neutral-950 text-neutral-100 overflow-hidden font-sans">
     <!-- Header -->
     <header class="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0">
       <h1 class="text-base font-semibold">
@@ -133,11 +145,11 @@ function copyRoomCode() {
     </div>
 
     <!-- Active Call View -->
-    <div v-else class="grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_360px] lg:h-[calc(100vh-60px)] lg:min-h-0 lg:overflow-hidden">
+    <div v-else class="flex flex-col flex-1 min-h-0 gap-4 p-4 lg:grid lg:grid-cols-[1fr_360px] lg:h-[calc(100vh-60px)] lg:min-h-0 lg:overflow-hidden">
       <!-- Video Grid Section -->
-      <section class="flex flex-col gap-4 lg:h-full lg:min-h-0">
+      <section class="flex flex-col gap-3 min-h-0 shrink-0 h-[45dvh] sm:h-[50dvh] lg:h-full lg:min-h-0 lg:flex-1">
         <!-- 4-Video layout grid -->
-        <div class="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 lg:min-h-0 overflow-y-auto pr-1">
+        <div class="grid grid-cols-2 grid-rows-2 gap-3 flex-1 min-h-0">
           <!-- Local video -->
           <GroupVideo
             :stream="groupCall.localStream.value"
@@ -157,7 +169,7 @@ function copyRoomCode() {
 
           <!-- Placeholders if less than 4 screens -->
           <template v-for="n in Math.max(0, 3 - groupCall.participants.value.length)" :key="n">
-            <div class="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-neutral-900/30 border border-white/5 border-dashed flex flex-col items-center justify-center gap-2 text-neutral-600">
+            <div class="relative w-full h-full overflow-hidden rounded-xl bg-neutral-900/30 border border-white/5 border-dashed flex flex-col items-center justify-center gap-2 text-neutral-600">
               <UIcon name="i-heroicons-user-plus" class="h-8 w-8 opacity-40 animate-pulse" />
               <span class="text-xs">Waiting for friend...</span>
             </div>
@@ -173,7 +185,7 @@ function copyRoomCode() {
       </section>
 
       <!-- Chat and Participants sidebar -->
-      <section class="flex flex-col min-h-[320px] lg:min-h-0 lg:h-full rounded-xl bg-neutral-900/40 border border-white/10 overflow-hidden">
+      <section class="flex flex-col flex-1 min-h-0 lg:h-full rounded-xl bg-neutral-900/40 border border-white/10 overflow-hidden">
         <div class="flex border-b border-white/10 bg-neutral-900/60">
           <button
             class="flex-1 py-3 text-xs font-bold uppercase tracking-wider text-center border-r border-white/10"
@@ -194,7 +206,7 @@ function copyRoomCode() {
         <!-- Tab: Chat -->
         <div v-show="activeTab === 'chat'" class="flex flex-1 flex-col min-h-0">
           <!-- Messages Box -->
-          <div class="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          <div ref="messagesEl" class="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
             <div
               v-for="msg in groupCall.messages.value"
               :key="msg.id"
