@@ -122,7 +122,7 @@ export function registerSocketServer(io: AppServer): void {
 
     registerSignalingHandlers(socket, io, matchmaker);
     registerChatHandlers(socket, io, matchmaker, messageLimiter, typingLimiter);
-    registerGroupHandlers(socket, io, users, groupRooms);
+    registerGroupHandlers(socket, io, users, groupRooms, userIdToSocketId);
 
     socket.on("find-partner", () => {
       touch(socket.id);

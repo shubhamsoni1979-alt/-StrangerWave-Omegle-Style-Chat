@@ -118,10 +118,7 @@ export function useWebRTC() {
       const connectionStore = useConnectionStore();
       if (pc.connectionState === "connected") {
         connectionStore.setConnected();
-      } else if (
-        pc.connectionState === "failed" ||
-        pc.connectionState === "disconnected"
-      ) {
+      } else if (pc.connectionState === "failed") {
         onFailed?.();
       }
     };

@@ -129,6 +129,11 @@ export function useGroupWebRTC() {
       myUserId.value = payload.userId;
     });
 
+    // Listen for incoming direct calls to join them automatically
+    socket.on("incoming-group-call", (payload: { roomCode: string }) => {
+      joinRoom(payload.roomCode);
+    });
+
     // Listen for current members in the room when we join
     socket.on("group-room-members", async (payload: { members: { socketId: string; userId: string }[] }) => {
       participants.value = payload.members;

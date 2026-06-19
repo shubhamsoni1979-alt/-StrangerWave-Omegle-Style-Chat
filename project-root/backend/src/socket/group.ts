@@ -9,7 +9,8 @@ export function registerGroupHandlers(
   socket: AppSocket,
   io: AppServer,
   users: Map<string, SessionUser>,
-  groupRooms: Map<string, { code: string; memberIds: string[] }>
+  groupRooms: Map<string, { code: string; memberIds: string[] }>,
+  userIdToSocketId: Map<string, string>
 ): void {
   
   socket.on("join-group-room", (payload: { roomCode: string }) => {
@@ -21,6 +22,12 @@ export function registerGroupHandlers(
 
     // A room code can be a 6-digit User ID of a friend, OR a custom room code.
     const roomCode = rawCode;
+
+    // Direct Call: if the room code is a friend's User ID, invite them automatically
+    const targetSocketId = userIdToSocketId.get(roomCode);
+    if (targetSocketId && targetSocketId !== socket.id) {
+      io.to(targetSocketId).emit("incoming-group-call", { roomCode });
+    }
 
     let room = groupRooms.get(roomCode);
     if (!room) {
