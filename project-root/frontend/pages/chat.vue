@@ -100,6 +100,14 @@ function handleSendMessage(text: string): void {
           >
             Report
           </UButton>
+          <UButton
+            variant="ghost"
+            color="amber"
+            icon="i-heroicons-users"
+            @click="router.push('/group')"
+          >
+            Group Call
+          </UButton>
         </div>
       </section>
 

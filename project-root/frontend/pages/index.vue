@@ -13,6 +13,12 @@ function enterChat(): void {
   userStore.acceptTerms();
   router.push("/chat");
 }
+
+function enterGroupChat(): void {
+  if (!canEnter.value) return;
+  userStore.acceptTerms();
+  router.push("/group");
+}
 </script>
 
 <template>
@@ -42,9 +48,14 @@ function enterChat(): void {
           class="text-sm text-neutral-300"
         />
 
-        <UButton block size="lg" color="primary" :disabled="!canEnter" @click="enterChat">
-          Start chatting
-        </UButton>
+        <div class="flex flex-col gap-3">
+          <UButton block size="lg" color="primary" :disabled="!canEnter" @click="enterChat">
+            Start 1-on-1 chatting
+          </UButton>
+          <UButton block size="lg" color="amber" variant="soft" :disabled="!canEnter" @click="enterGroupChat">
+            Group Video Call (Direct)
+          </UButton>
+        </div>
 
         <p class="text-center text-xs text-neutral-500">
           This site doesn't store messages or video. Conversations end the moment you leave.

@@ -3,8 +3,26 @@ import { Matchmaker } from "../matchmaking/matcher";
 import { RateLimiter } from "../middleware/rateLimit";
 import { registerSignalingHandlers } from "./signaling";
 import { registerChatHandlers } from "./chat";
+import { registerGroupHandlers } from "./group";
 import type { ClientToServerEvents, ServerToClientEvents, SessionUser } from "../types";
 import { logger } from "../utils/logger";
+
+function generateUniqueUserId(users: Map<string, SessionUser>): string {
+  let attempts = 0;
+  while (attempts < 1000) {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    let exists = false;
+    for (const u of users.values()) {
+      if (u.userId === code) {
+        exists = true;
+        break;
+      }
+    }
+    if (!exists) return code;
+    attempts++;
+  }
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 type AppSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 type AppServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -17,6 +35,8 @@ const STALE_SOCKET_TIMEOUT_MS = Number(process.env.STALE_SOCKET_TIMEOUT_MS ?? 30
 export function registerSocketServer(io: AppServer): void {
   const matchmaker = new Matchmaker();
   const users = new Map<string, SessionUser>();
+  const groupRooms = new Map<string, { code: string; memberIds: string[] }>();
+  const userIdToSocketId = new Map<string, string>();
 
   const findPartnerLimiter = new RateLimiter(FIND_PARTNER_LIMIT, 10_000);
   const messageLimiter = new RateLimiter(MESSAGE_LIMIT, 10_000);
@@ -68,6 +88,10 @@ export function registerSocketServer(io: AppServer): void {
   }, STALE_SOCKET_TIMEOUT_MS);
 
   function cleanupUser(socketId: string): void {
+    const user = users.get(socketId);
+    if (user) {
+      userIdToSocketId.delete(user.userId);
+    }
     matchmaker.removeFromQueue(socketId);
     const partnerId = matchmaker.leaveRoom(socketId);
     if (partnerId) {
@@ -82,17 +106,23 @@ export function registerSocketServer(io: AppServer): void {
   }
 
   io.on("connection", (socket: AppSocket) => {
+    const userId = generateUniqueUserId(users);
     users.set(socket.id, {
       socketId: socket.id,
+      userId,
       roomId: null,
       queuedAt: null,
       lastSeenAt: Date.now(),
       recentPartnerIds: new Set(),
     });
-    logger.info("connected", { socketId: socket.id, total: users.size });
+    userIdToSocketId.set(userId, socket.id);
+    logger.info("connected", { socketId: socket.id, userId, total: users.size });
+
+    socket.emit("user-id", { userId });
 
     registerSignalingHandlers(socket, io, matchmaker);
     registerChatHandlers(socket, io, matchmaker, messageLimiter, typingLimiter);
+    registerGroupHandlers(socket, io, users, groupRooms);
 
     socket.on("find-partner", () => {
       touch(socket.id);

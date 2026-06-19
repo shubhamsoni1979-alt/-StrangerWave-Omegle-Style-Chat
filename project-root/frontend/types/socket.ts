@@ -25,6 +25,14 @@ export interface ClientToServerEvents {
   typing: (payload: { isTyping: boolean }) => void;
 
   "report-partner": (payload: { reason: string }) => void;
+
+  // Group call events
+  "join-group-room": (payload: { roomCode: string }) => void;
+  "leave-group-room": () => void;
+  "group-offer": (payload: { to: string; sdp: RTCSessionDescriptionLike }) => void;
+  "group-answer": (payload: { to: string; sdp: RTCSessionDescriptionLike }) => void;
+  "group-ice-candidate": (payload: { to: string; candidate: RTCIceCandidateLike }) => void;
+  "send-group-message": (payload: { text: string }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -41,4 +49,14 @@ export interface ServerToClientEvents {
 
   "rate-limited": (payload: { event: string; retryAfterMs: number }) => void;
   "error-message": (payload: { message: string }) => void;
+
+  // Group call events
+  "user-id": (payload: { userId: string }) => void;
+  "user-joined-group": (payload: { socketId: string; userId: string }) => void;
+  "user-left-group": (payload: { socketId: string }) => void;
+  "group-room-members": (payload: { members: { socketId: string; userId: string }[] }) => void;
+  "group-offer": (payload: { from: string; sdp: RTCSessionDescriptionLike }) => void;
+  "group-answer": (payload: { from: string; sdp: RTCSessionDescriptionLike }) => void;
+  "group-ice-candidate": (payload: { from: string; candidate: RTCIceCandidateLike }) => void;
+  "receive-group-message": (payload: { fromSocketId: string; fromUserId: string; text: string; at: number }) => void;
 }
