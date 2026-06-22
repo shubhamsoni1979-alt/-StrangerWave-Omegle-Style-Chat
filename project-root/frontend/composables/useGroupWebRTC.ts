@@ -1,11 +1,13 @@
 import { ref, shallowRef, watch } from "vue";
 import { useSocket } from "./useSocket";
+import { useConnectionStore } from "~/stores/connection";
 import type { IceServerConfig } from "~/types/webrtc";
 import type { RTCIceCandidateLike, RTCSessionDescriptionLike } from "~/types/socket";
 
 export function useGroupWebRTC() {
   const config = useRuntimeConfig();
   const { connect, disconnect, getSocket } = useSocket();
+  const connectionStore = useConnectionStore();
 
   const localStream = shallowRef<MediaStream | null>(null);
   // Record of peer socketId to MediaStream
@@ -193,6 +195,7 @@ export function useGroupWebRTC() {
     socket.off("group-ice-candidate");
     socket.off("receive-group-message");
     socket.off("error-message");
+    socket.off("online-count");
 
     // Listen for our User ID assigned by the server
     socket.on("user-id", (payload: { userId: string }) => {
@@ -202,6 +205,10 @@ export function useGroupWebRTC() {
     // Listen for incoming direct calls to join them automatically
     socket.on("incoming-group-call", (payload: { roomCode: string }) => {
       joinRoom(payload.roomCode);
+    });
+
+    socket.on("online-count", ({ count }) => {
+      connectionStore.setOnlineCount(count);
     });
 
     // Listen for current members in the room when we join
@@ -398,6 +405,7 @@ export function useGroupWebRTC() {
       socket.off("group-ice-candidate");
       socket.off("receive-group-message");
       socket.off("error-message");
+      socket.off("online-count");
     }
 
     disconnect();

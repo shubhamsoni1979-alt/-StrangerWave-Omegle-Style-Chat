@@ -32,11 +32,22 @@ const MESSAGE_LIMIT = Number(process.env.MAX_MESSAGES_PER_10S ?? 15);
 const QUEUE_MATCH_INTERVAL_MS = Number(process.env.QUEUE_MATCH_INTERVAL_MS ?? 500);
 const STALE_SOCKET_TIMEOUT_MS = Number(process.env.STALE_SOCKET_TIMEOUT_MS ?? 30000);
 
+let activeUserCount = 0;
+
+export function getActiveUserCount(): number {
+  return activeUserCount;
+}
+
 export function registerSocketServer(io: AppServer): void {
   const matchmaker = new Matchmaker();
   const users = new Map<string, SessionUser>();
   const groupRooms = new Map<string, { code: string; memberIds: string[] }>();
   const userIdToSocketId = new Map<string, string>();
+
+  function updateActiveUserCount(): void {
+    activeUserCount = users.size;
+    io.emit("online-count", { count: activeUserCount });
+  }
 
   const findPartnerLimiter = new RateLimiter(FIND_PARTNER_LIMIT, 10_000);
   const messageLimiter = new RateLimiter(MESSAGE_LIMIT, 10_000);
@@ -103,6 +114,7 @@ export function registerSocketServer(io: AppServer): void {
     findPartnerLimiter.clear(socketId);
     messageLimiter.clear(socketId);
     typingLimiter.clear(socketId);
+    updateActiveUserCount();
   }
 
   io.on("connection", (socket: AppSocket) => {
@@ -119,6 +131,7 @@ export function registerSocketServer(io: AppServer): void {
     logger.info("connected", { socketId: socket.id, userId, total: users.size });
 
     socket.emit("user-id", { userId });
+    updateActiveUserCount();
 
     registerSignalingHandlers(socket, io, matchmaker);
     registerChatHandlers(socket, io, matchmaker, messageLimiter, typingLimiter);

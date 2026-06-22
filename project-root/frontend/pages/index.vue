@@ -1,12 +1,34 @@
 <script setup lang="ts">
+import { onMounted } from "vue";
 import { useUserStore } from "~/stores/user";
+import { useConnectionStore } from "~/stores/connection";
 
 const userStore = useUserStore();
+const connectionStore = useConnectionStore();
 const router = useRouter();
+const config = useRuntimeConfig();
+
 const agreedToAge = ref(false);
 const agreedToRules = ref(false);
 
 const canEnter = computed(() => agreedToAge.value && agreedToRules.value);
+
+onMounted(async () => {
+  let url = getBackendUrl(config.public.backendUrl);
+  if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+    url = `https://${url}`;
+  }
+  try {
+    const res = await $fetch<{ count: number }>("/api/online-count", {
+      baseURL: url,
+    });
+    if (res && typeof res.count === "number") {
+      connectionStore.setOnlineCount(res.count);
+    }
+  } catch (err) {
+    console.error("Failed to fetch online count:", err);
+  }
+});
 
 function enterChat(): void {
   if (!canEnter.value) return;
@@ -34,6 +56,15 @@ function enterGroupChat(): void {
         <p class="mt-2 text-sm text-neutral-400">
           Random video chat with someone new, anywhere in the world. No signup, no profile.
         </p>
+
+        <!-- Live Online Users Badge -->
+        <div v-if="connectionStore.onlineCount > 0" class="mt-4 inline-flex items-center gap-2 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 font-sans text-xs font-semibold text-green-400">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+          </span>
+          {{ connectionStore.onlineCount }} {{ connectionStore.onlineCount === 1 ? 'person' : 'people' }} online now
+        </div>
       </div>
 
       <div class="space-y-4 rounded-2xl bg-neutral-900 p-6 ring-1 ring-white/10">

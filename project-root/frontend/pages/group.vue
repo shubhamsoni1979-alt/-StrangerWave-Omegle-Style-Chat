@@ -2,9 +2,11 @@
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useGroupWebRTC } from "~/composables/useGroupWebRTC";
 import { useUserStore } from "~/stores/user";
+import { useConnectionStore } from "~/stores/connection";
 
 const router = useRouter();
 const userStore = useUserStore();
+const connectionStore = useConnectionStore();
 const toast = useToast();
 
 const groupCall = useGroupWebRTC();
@@ -92,14 +94,25 @@ function copyRoomCode() {
       <h1 class="text-base font-semibold">
         Stranger<span class="text-amber-400">Wave</span> <span class="ml-2 rounded-md bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300 font-normal">Group</span>
       </h1>
-      <div v-if="groupCall.roomCode.value" class="flex items-center gap-2">
-        <span class="text-xs text-neutral-400">Room Code:</span>
-        <span class="text-sm font-mono font-bold text-amber-400 bg-neutral-900 px-2 py-1 rounded border border-white/10">{{ groupCall.roomCode.value }}</span>
-        <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-clipboard" @click="copyRoomCode" />
-      </div>
-      <div v-else class="text-xs text-neutral-400 flex items-center gap-2">
-        <span>Your ID:</span>
-        <span class="text-sm font-mono font-bold text-neutral-200 bg-neutral-900 px-2 py-0.5 rounded border border-white/5">{{ groupCall.myUserId.value || 'Connecting...' }}</span>
+      <div class="flex items-center gap-3">
+        <!-- Live Online Users Pill -->
+        <div class="flex items-center gap-2 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-0.5 font-sans text-[10px] font-extrabold tracking-wider text-green-400">
+          <span class="relative flex h-1.5 w-1.5">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+            <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500"></span>
+          </span>
+          {{ connectionStore.onlineCount || 1 }} ONLINE
+        </div>
+
+        <div v-if="groupCall.roomCode.value" class="flex items-center gap-2">
+          <span class="text-xs text-neutral-400">Room Code:</span>
+          <span class="text-sm font-mono font-bold text-amber-400 bg-neutral-900 px-2 py-1 rounded border border-white/10">{{ groupCall.roomCode.value }}</span>
+          <UButton size="xs" variant="ghost" color="gray" icon="i-heroicons-clipboard" @click="copyRoomCode" />
+        </div>
+        <div v-else class="text-xs text-neutral-400 flex items-center gap-2">
+          <span>Your ID:</span>
+          <span class="text-sm font-mono font-bold text-neutral-200 bg-neutral-900 px-2 py-0.5 rounded border border-white/5">{{ groupCall.myUserId.value || 'Connecting...' }}</span>
+        </div>
       </div>
     </header>
 

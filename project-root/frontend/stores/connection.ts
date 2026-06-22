@@ -9,6 +9,7 @@ export const useConnectionStore = defineStore("connection", {
     errorMessage: null as string | null,
     /** How many strangers this tab has talked to this session - purely cosmetic. */
     strangerCount: 0,
+    onlineCount: 0,
   }),
 
   getters: {
@@ -42,6 +43,9 @@ export const useConnectionStore = defineStore("connection", {
     setError(message: string) {
       this.errorMessage = message;
       this.status = "error";
+    },
+    setOnlineCount(count: number) {
+      this.onlineCount = count;
     },
     reset() {
       this.status = "idle";

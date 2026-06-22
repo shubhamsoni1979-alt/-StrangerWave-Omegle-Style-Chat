@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { registerSocketServer } from "./socket/events";
+import { registerSocketServer, getActiveUserCount } from "./socket/events";
 import { getIceServers } from "./webrtc/peer";
 import { logger } from "./utils/logger";
 import type { ClientToServerEvents, ServerToClientEvents } from "./types";
@@ -68,6 +68,10 @@ app.get("/health", (_req, res) => {
 // so TURN credentials are only ever read from server-side env vars.
 app.get("/api/ice-servers", (_req, res) => {
   res.json({ iceServers: getIceServers() });
+});
+
+app.get("/api/online-count", (_req, res) => {
+  res.json({ count: getActiveUserCount() });
 });
 
 const httpServer = createServer(app);

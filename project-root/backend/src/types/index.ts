@@ -74,6 +74,7 @@ export interface ServerToClientEvents {
   "group-ice-candidate": (payload: { from: string; candidate: RTCIceCandidateLike }) => void;
   "receive-group-message": (payload: { fromSocketId: string; fromUserId: string; text: string; at: number }) => void;
   "incoming-group-call": (payload: { roomCode: string }) => void;
+  "online-count": (payload: { count: number }) => void;
 }
 
 /** Minimal shape we accept over the wire - avoids depending on DOM lib types in a Node project */

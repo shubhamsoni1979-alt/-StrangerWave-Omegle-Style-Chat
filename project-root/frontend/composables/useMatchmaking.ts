@@ -61,6 +61,7 @@ export function useMatchmaking() {
     socket.off("partner-left");
     socket.off("error-message");
     socket.off("rate-limited");
+    socket.off("online-count");
 
     socket.on("connect", () => {
       // Re-enqueue automatically on connect/reconnect if we were searching in the UI.
@@ -129,6 +130,10 @@ export function useMatchmaking() {
       // needs to wait a moment before retrying.
     });
 
+    socket.on("online-count", ({ count }) => {
+      connectionStore.setOnlineCount(count);
+    });
+
     chat.bindListeners();
     listenersBound = true;
   }
@@ -170,6 +175,7 @@ export function useMatchmaking() {
     socket.off("partner-left");
     socket.off("error-message");
     socket.off("rate-limited");
+    socket.off("online-count");
     
     // Also clean up useChat listeners
     socket.off("receive-message");
