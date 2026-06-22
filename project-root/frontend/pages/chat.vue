@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from "vue";
+import { onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useConnectionStore } from "~/stores/connection";
 import { useChatStore } from "~/stores/chat";
 import { useUserStore } from "~/stores/user";
@@ -13,6 +13,9 @@ const toast = useToast();
 const matchmaking = useMatchmaking();
 const localStream = matchmaking.localStream;
 const remoteStream = matchmaking.remoteStream;
+
+const isChatOpen = ref(false);
+const unreadCount = ref(0);
 
 onMounted(async () => {
   if (!userStore.hasAcceptedTerms) {
@@ -36,6 +39,8 @@ onBeforeUnmount(() => {
 
 function handleNext(): void {
   matchmaking.findNext();
+  // Close mobile chat on next matchmaking to make video active
+  isChatOpen.value = false;
 }
 
 function handleEnd(): void {
@@ -61,67 +66,100 @@ function toggleMic(): void {
 function handleSendMessage(text: string): void {
   matchmaking.sendMessage(text);
 }
+
+// Watch for incoming messages when chat panel is closed
+watch(
+  () => chatStore.messages.length,
+  (newLength, oldLength) => {
+    if (newLength > oldLength && !isChatOpen.value) {
+      const lastMessage = chatStore.messages[newLength - 1];
+      if (lastMessage && lastMessage.from === "stranger") {
+        unreadCount.value++;
+      }
+    }
+  }
+);
+
+// Clear unread counts once chat is opened
+watch(isChatOpen, (open) => {
+  if (open) {
+    unreadCount.value = 0;
+  }
+});
 </script>
 
 <template>
-  <main class="flex flex-col bg-neutral-950 text-neutral-100 overflow-hidden" style="height: var(--vh, 100vh);">
-    <header class="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0">
-      <h1 class="text-base font-semibold">
-        Stranger<span class="text-primary-400">Wave</span>
-      </h1>
-      <div class="flex items-center gap-4">
-        <MatchStatus :status="connectionStore.status" />
-        <ConnectionStatus />
-      </div>
-    </header>
+  <VideoChatLayout :is-chat-open="isChatOpen">
+    <!-- Header Slot -->
+    <template #header>
+      <Header />
+    </template>
 
-    <div class="flex flex-col flex-1 min-h-0 gap-4 p-4 lg:grid lg:grid-cols-[1fr_360px] lg:h-[calc(100vh-60px)] lg:min-h-0 lg:overflow-hidden">
-      <section class="flex flex-col gap-3 min-h-0 shrink-0 h-[45dvh] sm:h-[50dvh] lg:h-full lg:min-h-0 lg:flex-1">
-        <div class="grid grid-cols-2 gap-3 flex-1 min-h-0">
-          <RemoteVideo
-            :stream="remoteStream"
-            :is-connected="connectionStore.isConnected"
-            :is-searching="connectionStore.isSearching"
-            class="h-full min-h-0"
-          />
-          <LocalVideo :stream="localStream" :camera-on="userStore.isCameraOn" class="h-full min-h-0" />
-        </div>
+    <!-- Remote Video Slot -->
+    <template #remote>
+      <RemoteVideo
+        :stream="remoteStream"
+        :is-connected="connectionStore.isConnected"
+        :is-searching="connectionStore.isSearching"
+        class="h-full w-full"
+      />
+    </template>
 
-        <div class="flex flex-wrap items-center justify-center gap-3 rounded-xl bg-neutral-900/60 p-3 ring-1 ring-white/10 shrink-0">
-          <CameraButton :camera-on="userStore.isCameraOn" @toggle="toggleCamera" />
-          <MuteButton :mic-on="userStore.isMicOn" @toggle="toggleMic" />
-          <NextButton :disabled="connectionStore.isSearching" @click="handleNext" />
-          <EndButton @click="handleEnd" />
-          <UButton
-            variant="ghost"
-            color="gray"
-            icon="i-heroicons-flag"
-            :disabled="!connectionStore.isMatched"
-            @click="handleReport"
-          >
-            Report
-          </UButton>
-          <UButton
-            variant="ghost"
-            color="amber"
-            icon="i-heroicons-users"
-            @click="router.push('/group')"
-          >
-            Group Call
-          </UButton>
-        </div>
-      </section>
+    <!-- Floating Local Preview Slot -->
+    <template #local>
+      <LocalPreview
+        :stream="localStream"
+        :camera-on="userStore.isCameraOn"
+        class="h-full w-full"
+      />
+    </template>
 
-      <section class="flex-1 min-h-0 lg:h-full">
+    <!-- Floating Mobile Chat Toggle Button Slot -->
+    <template #chat-toggle>
+      <ChatButton
+        :unread-count="unreadCount"
+        @click="isChatOpen = !isChatOpen"
+      />
+    </template>
+
+    <!-- Chat sidebar / slide drawer panel slot -->
+    <template #chat-panel>
+      <div class="flex flex-col h-full w-full relative">
+        <!-- Close overlay button visible only on mobile -->
+        <button
+          v-if="isChatOpen"
+          type="button"
+          class="absolute top-3.5 left-3.5 z-30 lg:hidden flex h-8 w-8 items-center justify-center rounded-full bg-black/60 border border-white/10 text-neutral-300 transition-all duration-200 active:scale-95 shadow-md hover:text-white"
+          aria-label="Close chat"
+          @click="isChatOpen = false"
+        >
+          <UIcon name="i-heroicons-chevron-right" class="h-4 w-4" />
+        </button>
+
         <ChatBox
           :messages="chatStore.messages"
           :stranger-is-typing="chatStore.strangerIsTyping"
           :disabled="!connectionStore.isMatched"
           @send="handleSendMessage"
           @typing="matchmaking.notifyTyping"
-          class="h-full"
+          class="h-full w-full"
         />
-      </section>
-    </div>
-  </main>
+      </div>
+    </template>
+
+    <!-- Bottom Controls dock slot -->
+    <template #controls>
+      <ControlBar
+        :camera-on="userStore.isCameraOn"
+        :mic-on="userStore.isMicOn"
+        :is-searching="connectionStore.isSearching"
+        :is-connected="connectionStore.isConnected"
+        @toggle-camera="toggleCamera"
+        @toggle-mic="toggleMic"
+        @next="handleNext"
+        @end="handleEnd"
+        @toggle-more="handleReport"
+      />
+    </template>
+  </VideoChatLayout>
 </template>

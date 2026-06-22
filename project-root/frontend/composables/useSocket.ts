@@ -16,12 +16,7 @@ export function useSocket() {
   function connect(): AppSocket {
     if (socketInstance?.connected) return socketInstance;
 
-    let url = config.public.backendUrl;
-    if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
-      if (!url || url.includes("localhost")) {
-        url = "https://strangerwave-omegle-style-chat-production.up.railway.app";
-      }
-    }
+    let url = getBackendUrl(config.public.backendUrl);
     if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
       url = `https://${url}`;
     }

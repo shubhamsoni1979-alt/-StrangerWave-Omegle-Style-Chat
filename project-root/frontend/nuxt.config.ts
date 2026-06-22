@@ -16,7 +16,7 @@ export default defineNuxtConfig({
     head: {
       title: "StrangerWave - Talk to someone new",
       meta: [
-        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
         {
           name: "description",
           content: "Instant random video chat with people around the world. No signup required.",

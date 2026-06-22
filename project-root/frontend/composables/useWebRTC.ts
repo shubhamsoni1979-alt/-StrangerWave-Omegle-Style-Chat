@@ -18,12 +18,7 @@ export function useWebRTC() {
   let hasRemoteDescription = false;
 
   async function fetchIceServers(): Promise<IceServerConfig[]> {
-    let url = config.public.backendUrl;
-    if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
-      if (!url || url.includes("localhost")) {
-        url = "https://strangerwave-omegle-style-chat-production.up.railway.app";
-      }
-    }
+    let url = getBackendUrl(config.public.backendUrl);
     if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
       url = `https://${url}`;
     }
@@ -41,6 +36,12 @@ export function useWebRTC() {
 
   async function requestLocalMedia(): Promise<MediaStream> {
     if (localStream.value) return localStream.value;
+
+    if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const errorMsg = "Camera/microphone access is not supported on this connection (Note: WebRTC requires a secure HTTPS connection or localhost).";
+      mediaError.value = errorMsg;
+      throw new Error(errorMsg);
+    }
 
     const constraintsList = [
       // 1. Try high-quality video & audio with advanced constraints

@@ -33,7 +33,11 @@ function onInput(): void {
   <div class="flex h-full flex-col rounded-xl bg-neutral-900/60 ring-1 ring-white/10">
     <MessageList :messages="messages" :stranger-is-typing="strangerIsTyping" class="min-h-0 flex-1" />
 
-    <form class="flex items-center gap-2 border-t border-white/10 p-2" @submit.prevent="submit">
+    <form 
+      class="flex items-center gap-2 border-t border-white/10 p-2"
+      style="padding-bottom: calc(8px + env(safe-area-inset-bottom)); padding-left: calc(8px + env(safe-area-inset-left)); padding-right: calc(8px + env(safe-area-inset-right));"
+      @submit.prevent="submit"
+    >
       <UInput
         v-model="draft"
         :disabled="disabled"

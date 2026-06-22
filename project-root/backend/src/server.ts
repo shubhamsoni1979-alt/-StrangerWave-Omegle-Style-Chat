@@ -20,9 +20,40 @@ const uniqueOrigins = Array.from(new Set(allowedOrigins.filter(Boolean)));
 
 const app = express();
 
+const isDev = process.env.NODE_ENV !== "production";
+
 app.use(
   cors({
-    origin: uniqueOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, etc.)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (uniqueOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      if (isDev) {
+        try {
+          const hostname = new URL(origin).hostname;
+          const isLocal =
+            hostname === "localhost" ||
+            hostname === "127.0.0.1" ||
+            hostname.startsWith("192.168.") ||
+            hostname.startsWith("10.") ||
+            hostname.startsWith("172.") ||
+            hostname.endsWith(".local");
+          if (isLocal) {
+            callback(null, true);
+            return;
+          }
+        } catch {
+          // ignore parsing error
+        }
+      }
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     methods: ["GET", "POST"],
     credentials: true,
   })
@@ -43,7 +74,35 @@ const httpServer = createServer(app);
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: uniqueOrigins,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (uniqueOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      if (isDev) {
+        try {
+          const hostname = new URL(origin).hostname;
+          const isLocal =
+            hostname === "localhost" ||
+            hostname === "127.0.0.1" ||
+            hostname.startsWith("192.168.") ||
+            hostname.startsWith("10.") ||
+            hostname.startsWith("172.") ||
+            hostname.endsWith(".local");
+          if (isLocal) {
+            callback(null, true);
+            return;
+          }
+        } catch {
+          // ignore parsing error
+        }
+      }
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },

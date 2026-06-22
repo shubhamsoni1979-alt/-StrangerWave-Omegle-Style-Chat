@@ -22,7 +22,10 @@ function enterGroupChat(): void {
 </script>
 
 <template>
-  <main class="flex min-h-screen flex-col items-center justify-center bg-neutral-950 px-4 py-12 text-neutral-100">
+  <main 
+    class="flex min-h-screen flex-col items-center justify-center bg-neutral-950 px-4 py-8 text-neutral-100 overflow-y-auto w-full"
+    style="padding-top: max(32px, env(safe-area-inset-top)); padding-bottom: max(32px, env(safe-area-inset-bottom));"
+  >
     <div class="w-full max-w-md">
       <div class="mb-8 text-center">
         <h1 class="text-3xl font-bold tracking-tight">

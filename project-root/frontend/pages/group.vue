@@ -85,7 +85,10 @@ function copyRoomCode() {
 <template>
   <main class="flex flex-col bg-neutral-950 text-neutral-100 overflow-hidden font-sans" style="height: var(--vh, 100vh);">
     <!-- Header -->
-    <header class="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0">
+    <header 
+      class="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0 bg-neutral-950/80 backdrop-blur"
+      style="padding-top: calc(12px + env(safe-area-inset-top)); padding-left: calc(16px + env(safe-area-inset-left)); padding-right: calc(16px + env(safe-area-inset-right));"
+    >
       <h1 class="text-base font-semibold">
         Stranger<span class="text-amber-400">Wave</span> <span class="ml-2 rounded-md bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300 font-normal">Group</span>
       </h1>
@@ -145,9 +148,13 @@ function copyRoomCode() {
     </div>
 
     <!-- Active Call View -->
-    <div v-else class="flex flex-col flex-1 min-h-0 gap-4 p-4 lg:grid lg:grid-cols-[1fr_360px] lg:h-[calc(100vh-60px)] lg:min-h-0 lg:overflow-hidden">
+    <div 
+      v-else 
+      class="flex flex-col flex-1 min-h-0 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid lg:grid-cols-[1fr_360px] lg:h-[calc(100vh-60px)] lg:min-h-0 lg:overflow-hidden"
+      style="padding-left: calc(12px + env(safe-area-inset-left)); padding-right: calc(12px + env(safe-area-inset-right));"
+    >
       <!-- Video Grid Section -->
-      <section class="flex flex-col gap-3 min-h-0 shrink-0 h-[28dvh] sm:h-[35dvh] lg:h-full lg:min-h-0 lg:flex-1">
+      <section class="flex flex-col gap-3 min-h-0 shrink-0 h-[38%] sm:h-[45%] lg:h-full lg:min-h-0 lg:flex-1">
         <!-- 4-Video layout grid -->
         <div class="grid grid-cols-2 grid-rows-2 gap-3 flex-1 min-h-0">
           <!-- Local video -->
@@ -234,7 +241,10 @@ function copyRoomCode() {
           </div>
 
           <!-- Input bar -->
-          <div class="p-3 border-t border-white/10 bg-neutral-950/40 flex items-center gap-2">
+          <div 
+            class="p-3 border-t border-white/10 bg-neutral-950/40 flex items-center gap-2"
+            style="padding-bottom: calc(12px + env(safe-area-inset-bottom)); padding-left: calc(12px + env(safe-area-inset-left)); padding-right: calc(12px + env(safe-area-inset-right));"
+          >
             <UInput
               v-model="chatInput"
               placeholder="Message group..."
