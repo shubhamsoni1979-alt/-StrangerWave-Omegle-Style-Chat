@@ -16,6 +16,7 @@ export function useWebRTC() {
   // be queued, since RTCPeerConnection.addIceCandidate throws otherwise.
   let pendingRemoteCandidates: RTCIceCandidateLike[] = [];
   let hasRemoteDescription = false;
+  let pcPromise: Promise<RTCPeerConnection> | null = null;
 
   async function fetchIceServers(): Promise<IceServerConfig[]> {
     let url = getBackendUrl(config.public.backendUrl);
@@ -87,51 +88,57 @@ export function useWebRTC() {
   }
 
   async function createPeerConnection(onFailed?: () => void): Promise<RTCPeerConnection> {
-    const iceServers = await fetchIceServers();
-    const pc = new RTCPeerConnection({ iceServers });
+    if (pcPromise) return pcPromise;
 
-    const stream = localStream.value;
-    if (stream) {
-      for (const track of stream.getTracks()) pc.addTrack(track, stream);
-    }
+    pcPromise = (async () => {
+      const iceServers = await fetchIceServers();
+      const pc = new RTCPeerConnection({ iceServers });
 
-    pc.ontrack = (event) => {
-      const incomingStream = event.streams[0] || new MediaStream([event.track]);
-      if (!remoteStream.value) {
-        remoteStream.value = incomingStream;
-      } else {
-        const currentTracks = remoteStream.value.getTracks();
-        if (!currentTracks.some((t) => t.id === event.track.id)) {
-          remoteStream.value.addTrack(event.track);
+      const stream = localStream.value;
+      if (stream) {
+        for (const track of stream.getTracks()) pc.addTrack(track, stream);
+      }
+
+      pc.ontrack = (event) => {
+        const incomingStream = event.streams[0] || new MediaStream([event.track]);
+        if (!remoteStream.value) {
+          remoteStream.value = incomingStream;
+        } else {
+          const currentTracks = remoteStream.value.getTracks();
+          if (!currentTracks.some((t) => t.id === event.track.id)) {
+            remoteStream.value.addTrack(event.track);
+          }
+          // Force shallowRef update so Vue's watcher in RemoteVideo.vue is triggered
+          remoteStream.value = new MediaStream(remoteStream.value.getTracks());
         }
-        // Force shallowRef update so Vue's watcher in RemoteVideo.vue is triggered
-        remoteStream.value = new MediaStream(remoteStream.value.getTracks());
-      }
-    };
+      };
 
-    pc.onicecandidate = (event) => {
-      if (!event.candidate) return;
-      const socket = connect();
-      socket.emit("ice-candidate", { candidate: event.candidate.toJSON() as RTCIceCandidateLike });
-    };
+      pc.onicecandidate = (event) => {
+        if (!event.candidate) return;
+        const socket = connect();
+        socket.emit("ice-candidate", { candidate: event.candidate.toJSON() as RTCIceCandidateLike });
+      };
 
-    pc.onconnectionstatechange = () => {
-      const connectionStore = useConnectionStore();
-      if (pc.connectionState === "connected") {
-        connectionStore.setConnected();
-      } else if (pc.connectionState === "failed") {
-        onFailed?.();
-      }
-    };
+      pc.onconnectionstatechange = () => {
+        const connectionStore = useConnectionStore();
+        if (pc.connectionState === "connected") {
+          connectionStore.setConnected();
+        } else if (pc.connectionState === "failed") {
+          onFailed?.();
+        }
+      };
 
-    peerConnection.value = pc;
-    hasRemoteDescription = false;
-    pendingRemoteCandidates = [];
-    return pc;
+      peerConnection.value = pc;
+      hasRemoteDescription = false;
+      pendingRemoteCandidates = [];
+      return pc;
+    })();
+
+    return pcPromise;
   }
 
   async function makeOffer(): Promise<void> {
-    const pc = peerConnection.value;
+    const pc = await pcPromise;
     if (!pc) return;
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -140,7 +147,7 @@ export function useWebRTC() {
   }
 
   async function handleRemoteOffer(sdp: RTCSessionDescriptionLike): Promise<void> {
-    const pc = peerConnection.value;
+    const pc = await pcPromise;
     if (!pc) return;
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
     hasRemoteDescription = true;
@@ -153,7 +160,7 @@ export function useWebRTC() {
   }
 
   async function handleRemoteAnswer(sdp: RTCSessionDescriptionLike): Promise<void> {
-    const pc = peerConnection.value;
+    const pc = await pcPromise;
     if (!pc) return;
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
     hasRemoteDescription = true;
@@ -161,7 +168,7 @@ export function useWebRTC() {
   }
 
   async function handleRemoteIceCandidate(candidate: RTCIceCandidateLike): Promise<void> {
-    const pc = peerConnection.value;
+    const pc = await pcPromise;
     if (!pc) return;
     if (!hasRemoteDescription) {
       pendingRemoteCandidates.push(candidate);
@@ -171,7 +178,7 @@ export function useWebRTC() {
   }
 
   async function flushPendingCandidates(): Promise<void> {
-    const pc = peerConnection.value;
+    const pc = await pcPromise;
     if (!pc) return;
     for (const candidate of pendingRemoteCandidates) {
       await pc.addIceCandidate(new RTCIceCandidate(candidate));
@@ -190,6 +197,7 @@ export function useWebRTC() {
   function teardownPeerConnection(): void {
     peerConnection.value?.close();
     peerConnection.value = null;
+    pcPromise = null;
     remoteStream.value = null;
     hasRemoteDescription = false;
     pendingRemoteCandidates = [];
