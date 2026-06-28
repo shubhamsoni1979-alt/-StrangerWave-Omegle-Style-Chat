@@ -349,7 +349,11 @@ export function useGroupWebRTC() {
     roomCode.value = code;
     
     // Acquire local media first
-    await requestLocalMedia();
+    try {
+      await requestLocalMedia();
+    } catch (err) {
+      console.warn("Failed to get local media for group room, proceeding without media:", err);
+    }
     
     initSocket();
     const socket = connect();

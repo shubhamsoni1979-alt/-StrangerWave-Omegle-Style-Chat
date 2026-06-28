@@ -49,12 +49,12 @@ onBeforeUnmount(() => {
       playsinline
       muted
       class="h-full w-full scale-x-[-1] object-cover"
-      :class="{ 'opacity-0': !cameraOn }"
+      :class="{ 'opacity-0': !cameraOn || !stream }"
     />
 
     <!-- Camera Off Placeholder -->
     <div
-      v-if="!cameraOn"
+      v-if="!cameraOn || !stream"
       class="absolute inset-0 flex flex-col items-center justify-center bg-[#0F1117]/90 text-[10px] font-semibold text-neutral-400 text-center p-1"
     >
       <UIcon name="i-heroicons-video-camera-slash" class="h-4 w-4 text-neutral-500 mb-1" />

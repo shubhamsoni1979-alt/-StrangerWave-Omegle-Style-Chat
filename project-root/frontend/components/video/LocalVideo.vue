@@ -48,9 +48,9 @@ onBeforeUnmount(() => {
       playsinline
       muted
       class="h-full w-full scale-x-[-1] object-cover"
-      :class="{ 'opacity-0': !cameraOn }"
+      :class="{ 'opacity-0': !cameraOn || !stream }"
     />
-    <div v-if="!cameraOn" class="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">
+    <div v-if="!cameraOn || !stream" class="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">
       Camera is off
     </div>
     <span

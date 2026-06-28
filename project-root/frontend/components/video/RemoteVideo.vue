@@ -9,30 +9,31 @@ const props = defineProps<{
 }>();
 
 const videoEl = ref<HTMLVideoElement | null>(null);
-const isMuted = ref(false);
-const showUnmutePrompt = ref(false);
+const isMuted = ref(true);
+const showUnmutePrompt = ref(true);
 
 async function attemptPlay() {
   if (!videoEl.value || !props.stream) return;
 
   try {
-    videoEl.value.muted = isMuted.value;
+    // 1. Try to play muted first (guaranteed to succeed on all mobile/PC browsers)
+    videoEl.value.muted = true;
     await videoEl.value.play();
-    if (!isMuted.value) {
+
+    // 2. Try to unmute programmatically (will succeed if user already interacted, e.g. clicked Start)
+    videoEl.value.muted = false;
+    try {
+      await videoEl.value.play();
+      isMuted.value = false;
       showUnmutePrompt.value = false;
+    } catch (unmuteErr) {
+      // Unmuting blocked by autoplay restriction, keep muted
+      videoEl.value.muted = true;
+      isMuted.value = true;
+      showUnmutePrompt.value = true;
     }
   } catch (err) {
-    console.warn("Remote video autoplay with audio blocked, trying muted:", err);
-    isMuted.value = true;
-    showUnmutePrompt.value = true;
-    if (videoEl.value) {
-      videoEl.value.muted = true;
-      try {
-        await videoEl.value.play();
-      } catch (muteErr) {
-        console.error("Remote video muted autoplay failed:", muteErr);
-      }
-    }
+    console.error("Muted autoplay failed:", err);
   }
 }
 
@@ -84,8 +85,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="relative w-full h-full overflow-hidden bg-[#0F1117] ring-1 ring-white/5"
-    :class="{ 'cursor-pointer': isConnected && isMuted }"
+    class="relative w-full h-full overflow-hidden bg-[#0F1117]"
+    :class="{ 'cursor-pointer': isConnected && isMuted && stream }"
     @click="handleVideoClick"
   >
     <video
@@ -94,18 +95,27 @@ onBeforeUnmount(() => {
       playsinline
       :muted="isMuted"
       class="h-full w-full object-cover bg-black"
-      :class="{ 'opacity-0': !isConnected }"
+      :class="{ 'opacity-0': !isConnected || !stream }"
     />
 
     <!-- Tap to Unmute Overlay -->
     <div
-      v-if="isConnected && showUnmutePrompt"
+      v-if="isConnected && stream && showUnmutePrompt"
       class="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-all duration-300 pointer-events-none"
     >
       <div class="flex flex-col items-center gap-2 rounded-xl bg-neutral-950/80 px-4 py-3 text-white ring-1 ring-white/10 shadow-xl">
         <UIcon name="i-heroicons-speaker-x-mark" class="h-6 w-6 text-amber-400 animate-bounce" />
         <span class="text-xs font-semibold select-none">Tap to Unmute Audio</span>
       </div>
+    </div>
+
+    <!-- Stranger's camera is off overlay -->
+    <div
+      v-if="isConnected && !stream"
+      class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-neutral-400 bg-neutral-950"
+    >
+      <UIcon name="i-heroicons-video-camera-slash" class="h-8 w-8 text-neutral-500" />
+      <p class="text-sm font-medium select-none">Stranger's camera is off</p>
     </div>
 
     <!-- Search/Status Overlay -->

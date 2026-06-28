@@ -140,8 +140,13 @@ export function useMatchmaking() {
 
   async function start(): Promise<void> {
     connectionStore.setStatus("requesting-media");
-    await webrtc.requestLocalMedia();
-    connectionStore.setStatus("media-ready");
+    try {
+      await webrtc.requestLocalMedia();
+      connectionStore.setStatus("media-ready");
+    } catch (err) {
+      console.warn("Failed to get local media, proceeding as text-only/receiver-only:", err);
+      connectionStore.setStatus("media-ready");
+    }
     bindListeners();
     const socket = connect();
     socket.emit("find-partner");

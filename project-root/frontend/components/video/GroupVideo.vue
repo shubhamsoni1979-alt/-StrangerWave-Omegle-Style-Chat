@@ -8,34 +8,33 @@ const props = defineProps<{
 }>();
 
 const videoEl = ref<HTMLVideoElement | null>(null);
-const internalMuted = ref(props.isMuted ?? false);
-const showUnmutePrompt = ref(false);
+const internalMuted = ref(props.isMuted ?? true);
+const showUnmutePrompt = ref(!props.isMuted);
 
 async function attemptPlay() {
   if (!videoEl.value || !props.stream) return;
 
   try {
-    videoEl.value.muted = internalMuted.value;
+    // 1. Play muted first (always allowed)
+    videoEl.value.muted = true;
     await videoEl.value.play();
-    if (!internalMuted.value) {
-      showUnmutePrompt.value = false;
+
+    // 2. If it's a remote stream (not locally muted), try to unmute programmatically
+    if (!props.isMuted) {
+      videoEl.value.muted = false;
+      try {
+        await videoEl.value.play();
+        internalMuted.value = false;
+        showUnmutePrompt.value = false;
+      } catch (unmuteErr) {
+        // Keep muted
+        videoEl.value.muted = true;
+        internalMuted.value = true;
+        showUnmutePrompt.value = true;
+      }
     }
   } catch (err) {
-    if (!props.isMuted) {
-      console.warn("Group video autoplay blocked, falling back to muted:", err);
-      internalMuted.value = true;
-      showUnmutePrompt.value = true;
-      if (videoEl.value) {
-        videoEl.value.muted = true;
-        try {
-          await videoEl.value.play();
-        } catch (muteErr) {
-          console.error("Group video muted play also failed:", muteErr);
-        }
-      }
-    } else {
-      console.error("Local/muted group video play failed:", err);
-    }
+    console.error("Group video play failed:", err);
   }
 }
 
