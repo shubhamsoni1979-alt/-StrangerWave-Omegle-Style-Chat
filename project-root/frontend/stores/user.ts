@@ -10,6 +10,9 @@ export const useUserStore = defineStore("user", {
     hasAcceptedTerms: false,
     isCameraOn: true,
     isMicOn: true,
+    userName: "",
+    userCountry: "India",
+    userFlag: "🇮🇳"
   }),
 
   actions: {
@@ -21,6 +24,11 @@ export const useUserStore = defineStore("user", {
     },
     toggleMic(value?: boolean) {
       this.isMicOn = value ?? !this.isMicOn;
+    },
+    setIdentity(name: string, country: string, flag: string) {
+      this.userName = name.trim() || "You";
+      this.userCountry = country.trim() || "India";
+      this.userFlag = flag || "🇮🇳";
     },
   },
 });

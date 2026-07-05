@@ -5,6 +5,8 @@ import { logger } from "../utils/logger";
 type AppSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 type AppServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
+const MAX_MESSAGE_LENGTH = Number(process.env.MAX_MESSAGE_LENGTH ?? 500);
+
 export function registerGroupHandlers(
   socket: AppSocket,
   io: AppServer,
@@ -105,12 +107,13 @@ export function registerGroupHandlers(
 
     const selfUser = users.get(socket.id);
     const selfUserId = selfUser?.userId ?? "";
+    const trimmed = payload.text.slice(0, MAX_MESSAGE_LENGTH);
     
     // Broadcast to everyone in the room (including sender)
     io.to(currentRoomCode).emit("receive-group-message", {
       fromSocketId: socket.id,
       fromUserId: selfUserId,
-      text: payload.text.trim(),
+      text: trimmed.trim(),
       at: Date.now()
     });
   });

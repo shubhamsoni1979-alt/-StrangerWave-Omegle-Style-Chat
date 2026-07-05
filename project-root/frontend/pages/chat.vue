@@ -102,6 +102,7 @@ watch(isChatOpen, (open) => {
         :is-connected="connectionStore.isConnected"
         :is-searching="connectionStore.isSearching"
         class="h-full w-full"
+        @next="handleNext"
       />
     </template>
 
@@ -158,7 +159,7 @@ watch(isChatOpen, (open) => {
         @toggle-mic="toggleMic"
         @next="handleNext"
         @end="handleEnd"
-        @toggle-more="handleReport"
+        @report="handleReport"
       />
     </template>
   </VideoChatLayout>

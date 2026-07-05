@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { toRaw } from "vue";
+import { useConnectionStore } from "~/stores/connection";
 
 const props = defineProps<{
   stream: MediaStream | null;
   isConnected: boolean;
   isSearching: boolean;
 }>();
+
+const emit = defineEmits<{
+  next: [];
+}>();
+
+const connectionStore = useConnectionStore();
 
 const videoEl = ref<HTMLVideoElement | null>(null);
 const isMuted = ref(true);
@@ -130,9 +137,44 @@ onBeforeUnmount(() => {
       </p>
     </div>
 
+    <!-- Top-Left Stranger Info Overlay (Desktop only) -->
+    <div v-if="isConnected && stream" class="hidden lg:flex absolute top-4 left-4 items-center gap-2 rounded-2xl bg-black/45 backdrop-blur-md px-3.5 py-2 ring-1 ring-white/15">
+      <div class="h-9 w-9 rounded-full bg-slate-500/30 border border-slate-400/50 flex items-center justify-center text-sm font-black text-white uppercase">
+        {{ connectionStore.partnerName ? connectionStore.partnerName.charAt(0) : 'S' }}
+      </div>
+      <div class="flex flex-col text-left mr-2">
+        <span class="text-xs font-bold text-white leading-tight">{{ connectionStore.partnerName || 'Stranger' }}</span>
+        <span class="text-[9px] font-medium text-neutral-300 leading-none">{{ connectionStore.partnerFlag }} {{ connectionStore.partnerCountry }}</span>
+      </div>
+      <!-- Badges from screenshot -->
+      <div class="flex items-center gap-1">
+        <span class="h-6 w-6 rounded-full bg-pink-500/20 border border-pink-500/30 flex items-center justify-center text-xs">💜</span>
+        <span class="h-6 w-6 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs">👮</span>
+      </div>
+    </div>
+
+    <!-- Bottom-Left Brand Overlay (Desktop only) -->
+    <div v-if="isConnected" class="hidden lg:flex absolute bottom-4 left-4 items-center gap-2 rounded-xl bg-black/45 backdrop-blur-md px-3 py-1.5 ring-1 ring-white/15">
+      <span class="text-xs font-extrabold text-white flex items-center gap-1.5">
+        <span class="text-amber-400">🐵</span> strangerwave.app
+      </span>
+    </div>
+
+    <!-- Bottom-Right Skip Button (Desktop only) -->
+    <button
+      v-if="isConnected && !isSearching"
+      type="button"
+      class="hidden lg:flex absolute bottom-4 right-4 z-20 h-11 w-11 items-center justify-center rounded-xl bg-black/50 hover:bg-black/75 active:scale-95 text-white transition-all duration-200 border border-white/10 shadow-2xl backdrop-blur-md"
+      aria-label="Next stranger"
+      @click.stop="emit('next')"
+    >
+      <UIcon name="i-heroicons-forward" class="h-6 w-6 text-white" />
+    </button>
+
+    <!-- Mobile Label -->
     <span
       v-if="isConnected"
-      class="absolute bottom-3 left-3 rounded-full bg-black/60 backdrop-blur-[2px] px-3 py-1 text-xs font-medium text-white/90 select-none font-sans ring-1 ring-white/10"
+      class="lg:hidden absolute bottom-3 left-3 rounded-full bg-black/60 backdrop-blur-[2px] px-3 py-1 text-xs font-medium text-white/90 select-none font-sans ring-1 ring-white/10"
     >
       Stranger
     </span>

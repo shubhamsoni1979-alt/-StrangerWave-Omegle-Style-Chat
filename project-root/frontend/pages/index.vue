@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useUserStore } from "~/stores/user";
 import { useConnectionStore } from "~/stores/connection";
 
@@ -8,10 +8,31 @@ const connectionStore = useConnectionStore();
 const router = useRouter();
 const config = useRuntimeConfig();
 
+const countries = [
+  { name: "India", flag: "🇮🇳" },
+  { name: "United States", flag: "🇺🇸" },
+  { name: "United Kingdom", flag: "🇬🇧" },
+  { name: "Canada", flag: "🇨🇦" },
+  { name: "Australia", flag: "🇦🇺" },
+  { name: "Germany", flag: "🇩🇪" },
+  { name: "France", flag: "🇫🇷" },
+  { name: "Japan", flag: "🇯🇵" },
+  { name: "Brazil", flag: "🇧🇷" },
+  { name: "Nigeria", flag: "🇳🇬" },
+  { name: "Singapore", flag: "🇸🇬" },
+  { name: "South Africa", flag: "🇿🇦" }
+];
+
+const nameInput = ref("");
+const selectedCountry = ref(countries[0]);
 const agreedToAge = ref(false);
 const agreedToRules = ref(false);
 
-const canEnter = computed(() => agreedToAge.value && agreedToRules.value);
+const canEnter = computed(() => 
+  agreedToAge.value && 
+  agreedToRules.value && 
+  nameInput.value.trim().length > 0
+);
 
 onMounted(async () => {
   let url = getBackendUrl(config.public.backendUrl);
@@ -32,12 +53,14 @@ onMounted(async () => {
 
 function enterChat(): void {
   if (!canEnter.value) return;
+  userStore.setIdentity(nameInput.value, selectedCountry.value.name, selectedCountry.value.flag);
   userStore.acceptTerms();
   router.push("/chat");
 }
 
 function enterGroupChat(): void {
   if (!canEnter.value) return;
+  userStore.setIdentity(nameInput.value, selectedCountry.value.name, selectedCountry.value.flag);
   userStore.acceptTerms();
   router.push("/group");
 }
@@ -70,10 +93,47 @@ function enterGroupChat(): void {
       <div class="space-y-4 rounded-2xl bg-neutral-900 p-6 ring-1 ring-white/10">
         <h2 class="text-sm font-semibold text-neutral-200">Before you start</h2>
 
+        <!-- Name Input -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-neutral-300">Your Display Name</label>
+          <UInput
+            v-model="nameInput"
+            placeholder="Enter your name..."
+            size="lg"
+            icon="i-heroicons-user"
+            class="bg-neutral-950/40 rounded-xl"
+          />
+        </div>
+
+        <!-- Country Selection -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-neutral-300">Your Country</label>
+          <USelectMenu
+            v-model="selectedCountry"
+            :options="countries"
+            option-attribute="name"
+            size="lg"
+            class="bg-neutral-950/40 rounded-xl"
+          >
+            <template #label>
+              <span class="flex items-center gap-2">
+                <span>{{ selectedCountry.flag }}</span>
+                <span>{{ selectedCountry.name }}</span>
+              </span>
+            </template>
+            <template #option="{ option }">
+              <span class="flex items-center gap-2">
+                <span>{{ option.flag }}</span>
+                <span>{{ option.name }}</span>
+              </span>
+            </template>
+          </USelectMenu>
+        </div>
+
         <UCheckbox
           v-model="agreedToAge"
           label="I confirm that I am at least 18 years old."
-          class="text-sm text-neutral-300"
+          class="text-sm text-neutral-300 pt-2"
         />
 
         <UCheckbox

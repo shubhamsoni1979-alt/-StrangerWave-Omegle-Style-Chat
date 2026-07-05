@@ -74,8 +74,24 @@ export function registerSocketServer(io: AppServer): void {
     if (initiatorUser) initiatorUser.roomId = room.id;
     if (receiverUser) receiverUser.roomId = room.id;
 
-    io.to(initiatorId).emit("partner-found", { roomId: room.id, initiator: true });
-    io.to(receiverId).emit("partner-found", { roomId: room.id, initiator: false });
+    io.to(initiatorId).emit("partner-found", {
+      roomId: room.id,
+      initiator: true,
+      partner: {
+        name: receiverUser?.name || "Stranger",
+        country: receiverUser?.country || "Unknown",
+        flag: receiverUser?.countryFlag || "🏳️",
+      }
+    });
+    io.to(receiverId).emit("partner-found", {
+      roomId: room.id,
+      initiator: false,
+      partner: {
+        name: initiatorUser?.name || "Stranger",
+        country: initiatorUser?.country || "Unknown",
+        flag: initiatorUser?.countryFlag || "🏳️",
+      }
+    });
   }
 
   /** Backstop sweep: in case a queued partner only becomes matchable later
@@ -137,7 +153,7 @@ export function registerSocketServer(io: AppServer): void {
     registerChatHandlers(socket, io, matchmaker, messageLimiter, typingLimiter);
     registerGroupHandlers(socket, io, users, groupRooms, userIdToSocketId);
 
-    socket.on("find-partner", () => {
+    socket.on("find-partner", (payload?: { name: string; country: string; flag: string }) => {
       touch(socket.id);
       if (!findPartnerLimiter.consume(socket.id, "find-partner")) {
         socket.emit("rate-limited", { event: "find-partner", retryAfterMs: 2000 });
@@ -147,7 +163,12 @@ export function registerSocketServer(io: AppServer): void {
       if (matchmaker.getRoomForSocket(socket.id) || matchmaker.isQueued(socket.id)) return;
 
       const user = users.get(socket.id);
-      if (user) user.queuedAt = Date.now();
+      if (user) {
+        user.queuedAt = Date.now();
+        user.name = payload?.name?.trim() || "Stranger";
+        user.country = payload?.country?.trim() || "Unknown";
+        user.countryFlag = payload?.flag || "🏳️";
+      }
       matchmaker.enqueue(socket.id);
       socket.emit("queue-joined");
       tryMatchFor(socket);

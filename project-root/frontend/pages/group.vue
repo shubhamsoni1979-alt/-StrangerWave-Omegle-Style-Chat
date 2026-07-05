@@ -13,6 +13,7 @@ const groupCall = useGroupWebRTC();
 const friendIdOrCode = ref("");
 const chatInput = ref("");
 const activeTab = ref("chat"); // or participants
+const MAX_MESSAGE_LENGTH = 500;
 
 const messagesEl = ref<HTMLDivElement | null>(null);
 
@@ -56,10 +57,16 @@ async function handleJoinCall() {
 }
 
 function handleSendMessage() {
-  const text = chatInput.value.trim();
+  const text = chatInput.value.trim().slice(0, MAX_MESSAGE_LENGTH);
   if (!text) return;
   groupCall.sendGroupMessage(text);
   chatInput.value = "";
+}
+
+function onChatInput(): void {
+  if (chatInput.value.length > MAX_MESSAGE_LENGTH) {
+    chatInput.value = chatInput.value.slice(0, MAX_MESSAGE_LENGTH);
+  }
 }
 
 function toggleCamera() {
@@ -260,9 +267,11 @@ function copyRoomCode() {
           >
             <UInput
               v-model="chatInput"
+              :maxlength="MAX_MESSAGE_LENGTH"
               placeholder="Message group..."
               class="flex-1"
               @keyup.enter="handleSendMessage"
+              @input="onChatInput"
             />
             <UButton color="amber" icon="i-heroicons-paper-airplane" @click="handleSendMessage" />
           </div>

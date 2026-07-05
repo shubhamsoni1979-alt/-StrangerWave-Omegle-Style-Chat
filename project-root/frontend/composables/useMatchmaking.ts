@@ -67,7 +67,11 @@ export function useMatchmaking() {
       // Re-enqueue automatically on connect/reconnect if we were searching in the UI.
       // This prevents the user from being dropped from the queue silently during connection hops or transport fallbacks.
       if (connectionStore.status === "queued") {
-        socket.emit("find-partner");
+        socket.emit("find-partner", {
+          name: userStore.userName,
+          country: userStore.userCountry,
+          flag: userStore.userFlag,
+        });
       }
     });
 
@@ -75,9 +79,9 @@ export function useMatchmaking() {
       connectionStore.setQueued();
     });
 
-    socket.on("partner-found", async ({ roomId, initiator }) => {
+    socket.on("partner-found", async ({ roomId, initiator, partner }) => {
       chatStore.clear();
-      connectionStore.setMatched(roomId, initiator);
+      connectionStore.setMatched(roomId, initiator, partner);
       startConnectionTimeout();
 
       try {
@@ -149,7 +153,11 @@ export function useMatchmaking() {
     }
     bindListeners();
     const socket = connect();
-    socket.emit("find-partner");
+    socket.emit("find-partner", {
+      name: userStore.userName,
+      country: userStore.userCountry,
+      flag: userStore.userFlag,
+    });
     connectionStore.setQueued();
   }
 

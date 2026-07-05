@@ -13,7 +13,7 @@ export interface RTCIceCandidateLike {
 export type PartnerLeftReason = "next" | "disconnect" | "left" | "report";
 
 export interface ClientToServerEvents {
-  "find-partner": () => void;
+  "find-partner": (payload?: { name: string; country: string; flag: string }) => void;
   "next-partner": () => void;
   "leave-chat": () => void;
 
@@ -37,7 +37,11 @@ export interface ClientToServerEvents {
 
 export interface ServerToClientEvents {
   "queue-joined": () => void;
-  "partner-found": (payload: { roomId: string; initiator: boolean }) => void;
+  "partner-found": (payload: { 
+    roomId: string; 
+    initiator: boolean; 
+    partner?: { name: string; country: string; flag: string }
+  }) => void;
   "partner-left": (payload: { reason: PartnerLeftReason }) => void;
 
   offer: (payload: { sdp: RTCSessionDescriptionLike }) => void;

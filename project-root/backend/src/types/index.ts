@@ -16,6 +16,9 @@ export interface SessionUser {
   lastSeenAt: number;
   /** Ids of partners already matched with in this session, to reduce immediate re-matching */
   recentPartnerIds: Set<string>;
+  name?: string;
+  country?: string;
+  countryFlag?: string;
 }
 
 export interface ChatRoom {
@@ -26,7 +29,7 @@ export interface ChatRoom {
 
 /** Client -> Server events */
 export interface ClientToServerEvents {
-  "find-partner": () => void;
+  "find-partner": (payload?: { name: string; country: string; flag: string }) => void;
   "next-partner": () => void;
   "leave-chat": () => void;
 
@@ -51,7 +54,11 @@ export interface ClientToServerEvents {
 /** Server -> Client events */
 export interface ServerToClientEvents {
   "queue-joined": () => void;
-  "partner-found": (payload: { roomId: string; initiator: boolean }) => void;
+  "partner-found": (payload: { 
+    roomId: string; 
+    initiator: boolean; 
+    partner?: { name: string; country: string; flag: string }
+  }) => void;
   "partner-left": (payload: { reason: "next" | "disconnect" | "left" | "report" }) => void;
 
   offer: (payload: { sdp: RTCSessionDescriptionLike }) => void;

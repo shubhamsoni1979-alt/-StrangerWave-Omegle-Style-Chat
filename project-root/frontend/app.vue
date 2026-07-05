@@ -21,7 +21,10 @@ body,
   width: 100%;
   overflow: hidden;
   position: fixed;
-  background-color: #0a0a0a;
+  background-image: linear-gradient(135deg, rgba(29, 23, 61, 0.95), rgba(79, 124, 255, 0.15)), url('/monkey_chat_bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
