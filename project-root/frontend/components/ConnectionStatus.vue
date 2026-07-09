@@ -5,8 +5,11 @@ import { useConnectionStore } from "~/stores/connection";
 
 const isOnline = ref(false);
 const isReconnecting = ref(false);
+const showDebug = ref(false);
+const backendUrl = ref("");
 const { connect } = useSocket();
 const connectionStore = useConnectionStore();
+const config = useRuntimeConfig();
 
 let socket: ReturnType<typeof connect> | null = null;
 
@@ -18,6 +21,7 @@ function handleRetry() {
 }
 
 onMounted(() => {
+  backendUrl.value = getBackendUrl(config.public.backendUrl);
   socket = connect();
   isOnline.value = socket.connected;
 
@@ -45,7 +49,12 @@ onBeforeUnmount(() => {
       class="h-2 w-2 rounded-full"
       :class="isOnline ? 'bg-green-500' : isReconnecting ? 'bg-amber-500 animate-pulse' : 'bg-red-500'"
     />
-    <span>{{ isOnline ? `Connected to server (${connectionStore.deviceType})` : isReconnecting ? "Reconnecting…" : "Disconnected" }}</span>
+    <span class="cursor-pointer hover:underline" @click="showDebug = !showDebug">
+      {{ isOnline ? `Connected to server (${connectionStore.deviceType})` : isReconnecting ? "Reconnecting…" : "Disconnected" }}
+    </span>
+    <span v-if="showDebug" class="text-[10px] bg-neutral-800/80 px-2 py-0.5 rounded text-neutral-400 font-mono select-all border border-white/5">
+      {{ backendUrl }}
+    </span>
     <button
       v-if="!isOnline && !isReconnecting"
       type="button"
