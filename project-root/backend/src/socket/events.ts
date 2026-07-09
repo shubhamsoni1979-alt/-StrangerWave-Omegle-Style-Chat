@@ -33,16 +33,34 @@ const QUEUE_MATCH_INTERVAL_MS = Number(process.env.QUEUE_MATCH_INTERVAL_MS ?? 50
 const STALE_SOCKET_TIMEOUT_MS = Number(process.env.STALE_SOCKET_TIMEOUT_MS ?? 30000);
 
 let activeUserCount = 0;
+let matchmakerInstance: Matchmaker | null = null;
 
 export function getActiveUserCount(): number {
   return activeUserCount;
 }
 
+export function getQueueSize(): number {
+  return matchmakerInstance?.queueSize() ?? 0;
+}
+
+export function getActiveRoomsCount(): number {
+  return matchmakerInstance?.activeRoomsCount() ?? 0;
+}
+
 export function registerSocketServer(io: AppServer): void {
   const matchmaker = new Matchmaker();
+  matchmakerInstance = matchmaker;
   const users = new Map<string, SessionUser>();
   const groupRooms = new Map<string, { code: string; memberIds: string[] }>();
   const userIdToSocketId = new Map<string, string>();
+
+  // Add connection error logging
+  io.on("connection_error", (err) => {
+    logger.error("Socket.io connection error:", {
+      message: err.message,
+      context: err.context,
+    });
+  });
 
   function updateActiveUserCount(): void {
     activeUserCount = users.size;
@@ -91,6 +109,20 @@ export function registerSocketServer(io: AppServer): void {
         country: initiatorUser?.country || "Unknown",
         flag: initiatorUser?.countryFlag || "🏳️",
       }
+    });
+
+    // Also emit 'matched' event to both sockets as expected by manual DevTools/diagnostic tests
+    io.to(initiatorId).emit("matched", {
+      roomId: room.id,
+      partnerId: receiverId,
+      initiator: true,
+      timestamp: Date.now()
+    });
+    io.to(receiverId).emit("matched", {
+      roomId: room.id,
+      partnerId: initiatorId,
+      initiator: false,
+      timestamp: Date.now()
     });
   }
 
@@ -144,7 +176,14 @@ export function registerSocketServer(io: AppServer): void {
       recentPartnerIds: new Set(),
     });
     userIdToSocketId.set(userId, socket.id);
-    logger.info("connected", { socketId: socket.id, userId, total: users.size });
+    logger.info("connected", {
+      socketId: socket.id,
+      userId,
+      ip: socket.handshake.address,
+      userAgent: socket.handshake.headers["user-agent"],
+      time: new Date().toISOString(),
+      total: users.size
+    });
 
     socket.emit("user-id", { userId });
     updateActiveUserCount();
@@ -170,12 +209,17 @@ export function registerSocketServer(io: AppServer): void {
         user.countryFlag = payload?.flag || "🏳️";
       }
       matchmaker.enqueue(socket.id);
+      logger.info("find-partner requested", { socketId: socket.id, name: payload?.name, queueSize: matchmaker.queueSize() });
       socket.emit("queue-joined");
       tryMatchFor(socket);
+      if (!matchmaker.getRoomForSocket(socket.id)) {
+        logger.info("no match found", { socketId: socket.id, queueSize: matchmaker.queueSize() });
+      }
     });
 
     socket.on("next-partner", () => {
       touch(socket.id);
+      logger.info("next-partner requested", { socketId: socket.id });
       const partnerId = matchmaker.leaveRoom(socket.id);
       if (partnerId) {
         const partnerUser = users.get(partnerId);
@@ -194,6 +238,7 @@ export function registerSocketServer(io: AppServer): void {
 
     socket.on("leave-chat", () => {
       touch(socket.id);
+      logger.info("leave-chat requested", { socketId: socket.id });
       matchmaker.removeFromQueue(socket.id);
       const partnerId = matchmaker.leaveRoom(socket.id);
       if (partnerId) {

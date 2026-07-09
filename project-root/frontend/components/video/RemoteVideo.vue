@@ -127,14 +127,29 @@ onBeforeUnmount(() => {
 
     <!-- Search/Status Overlay -->
     <div v-if="!isConnected" class="absolute inset-0 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-[#0F1117]">
-      <UIcon
-        :name="isSearching ? 'i-heroicons-arrow-path' : 'i-heroicons-video-camera-slash'"
-        class="h-10 w-10 text-[#6C63FF]"
-        :class="{ 'animate-spin': isSearching }"
-      />
-      <p class="text-sm select-none font-medium tracking-wide">
-        {{ isSearching ? "Looking for someone to talk to..." : "Not connected yet" }}
-      </p>
+      <template v-if="connectionStore.status === 'error'">
+        <UIcon name="i-heroicons-exclamation-triangle" class="h-10 w-10 text-red-500 animate-bounce" />
+        <p class="text-sm select-none font-medium tracking-wide px-6 text-center text-red-400 max-w-xs leading-relaxed">
+          {{ connectionStore.errorMessage || "Something went wrong" }}
+        </p>
+        <button
+          type="button"
+          class="mt-2 px-5 py-2.5 bg-gradient-to-r from-[#6C63FF] to-[#4F7CFF] text-white rounded-full font-bold text-xs tracking-wider uppercase shadow-lg shadow-purple-500/20 active:scale-95 transition-all duration-200 hover:brightness-110 pointer-events-auto"
+          @click.stop="emit('next')"
+        >
+          Try Again
+        </button>
+      </template>
+      <template v-else>
+        <UIcon
+          :name="isSearching ? 'i-heroicons-arrow-path' : 'i-heroicons-video-camera-slash'"
+          class="h-10 w-10 text-[#6C63FF]"
+          :class="{ 'animate-spin': isSearching }"
+        />
+        <p class="text-sm select-none font-medium tracking-wide">
+          {{ isSearching ? "Looking for someone to talk to..." : "Not connected yet" }}
+        </p>
+      </template>
     </div>
 
     <!-- Top-Left Stranger Info Overlay (Desktop only) -->

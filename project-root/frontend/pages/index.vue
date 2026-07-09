@@ -39,6 +39,11 @@ onMounted(async () => {
   if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
     url = `https://${url}`;
   }
+  if (!import.meta.dev && (url.includes("localhost") || url.includes("127.0.0.1"))) {
+    console.warn(
+      "[Configuration Warning] StrangerWave is running in production, but NUXT_PUBLIC_BACKEND_URL resolves to localhost. Please set the NUXT_PUBLIC_BACKEND_URL environment variable in Vercel to point to your live backend!"
+    );
+  }
   try {
     const res = await $fetch<{ count: number }>("/api/online-count", {
       baseURL: url,

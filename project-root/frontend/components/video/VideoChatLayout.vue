@@ -33,20 +33,20 @@ defineProps<{
         </div>
       </div>
 
-      <!-- Mobile Layout: Full screen remote with floating local preview -->
-      <div class="lg:hidden relative w-full h-full flex flex-1 overflow-hidden">
-        <!-- Remote Video -->
-        <div class="w-full h-full">
-          <slot name="remote" />
-        </div>
-
-        <!-- Floating Local Preview -->
-        <div class="absolute bottom-4 right-4 z-10 w-[95px] h-[130px] sm:w-[110px] sm:h-[150px] shadow-xl">
+      <!-- Mobile/Tablet Layout: Stacked vertically or side-by-side -->
+      <div class="lg:hidden relative w-full h-full flex flex-col sm:flex-row flex-grow min-h-0 overflow-hidden gap-3 p-3">
+        <!-- Local Video (top on mobile, left on tablet) -->
+        <div class="w-full h-[48%] sm:h-full sm:w-[49%] rounded-2xl overflow-hidden bg-neutral-900 ring-1 ring-white/10 relative shrink-0 shadow-lg">
           <slot name="local" />
         </div>
 
+        <!-- Remote Video (bottom on mobile, right on tablet) -->
+        <div class="w-full h-[48%] sm:h-full sm:w-[49%] rounded-2xl overflow-hidden bg-neutral-900 ring-1 ring-white/10 relative shrink-0 shadow-lg">
+          <slot name="remote" />
+        </div>
+
         <!-- Floating Chat Button -->
-        <div class="absolute bottom-4 left-4 z-10">
+        <div class="absolute bottom-6 left-6 z-15">
           <slot name="chat-toggle" />
         </div>
 

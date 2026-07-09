@@ -14,6 +14,7 @@ export function useMatchmaking() {
 
   let listenersBound = false;
   let connectionTimeout: ReturnType<typeof setTimeout> | null = null;
+  let matchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Automatically clear the negotiation timeout when connected
   watch(
@@ -39,6 +40,23 @@ export function useMatchmaking() {
     if (connectionTimeout) {
       clearTimeout(connectionTimeout);
       connectionTimeout = null;
+    }
+  }
+
+  function startMatchTimeout(): void {
+    clearMatchTimeout();
+    matchTimeout = setTimeout(() => {
+      if (connectionStore.status === "queued") {
+        console.warn("Matchmaking timed out. No partner found.");
+        connectionStore.setError("No matches found. Want to try again?");
+      }
+    }, 30000); // 30s match timeout
+  }
+
+  function clearMatchTimeout(): void {
+    if (matchTimeout) {
+      clearTimeout(matchTimeout);
+      matchTimeout = null;
     }
   }
 
@@ -82,6 +100,7 @@ export function useMatchmaking() {
     socket.on("partner-found", async ({ roomId, initiator, partner }) => {
       chatStore.clear();
       connectionStore.setMatched(roomId, initiator, partner);
+      clearMatchTimeout();
       startConnectionTimeout();
 
       try {
@@ -159,19 +178,23 @@ export function useMatchmaking() {
       flag: userStore.userFlag,
     });
     connectionStore.setQueued();
+    startMatchTimeout();
   }
 
   function findNext(): void {
     clearConnectionTimeout();
+    clearMatchTimeout();
     webrtc.teardownPeerConnection();
     chatStore.clear();
     const socket = connect();
     socket.emit("next-partner");
     connectionStore.setQueued();
+    startMatchTimeout();
   }
 
   function endChat(): void {
     clearConnectionTimeout();
+    clearMatchTimeout();
     webrtc.teardownPeerConnection();
     webrtc.stopLocalMedia();
     chatStore.clear();

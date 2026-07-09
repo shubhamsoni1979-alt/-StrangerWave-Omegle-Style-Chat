@@ -38,6 +38,10 @@ export class Matchmaker {
     return this.queue.size();
   }
 
+  activeRoomsCount(): number {
+    return this.rooms.size;
+  }
+
   getQueueSnapshot(): readonly string[] {
     return this.queue.snapshot();
   }

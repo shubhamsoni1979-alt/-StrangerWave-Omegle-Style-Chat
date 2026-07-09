@@ -29,8 +29,11 @@ export function useSocket() {
         autoConnect: false,
         reconnection: true,
         reconnectionAttempts: 10,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
+        reconnectionDelay: 500,
+        reconnectionDelayMax: 3000,
+        transports: ["websocket", "polling"],
+        timeout: 10000,
+        secure: url.startsWith("https://")
       });
 
     if (!socketInstance.connected) socketInstance.connect();

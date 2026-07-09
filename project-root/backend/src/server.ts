@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { registerSocketServer, getActiveUserCount } from "./socket/events";
+import { registerSocketServer, getActiveUserCount, getQueueSize, getActiveRoomsCount } from "./socket/events";
 import { getIceServers } from "./webrtc/peer";
 import { logger } from "./utils/logger";
 import type { ClientToServerEvents, ServerToClientEvents } from "./types";
@@ -20,39 +20,35 @@ const uniqueOrigins = Array.from(new Set(allowedOrigins.filter(Boolean)));
 
 const app = express();
 
-const isDev = process.env.NODE_ENV !== "production";
+function isOriginAllowed(origin: string): boolean {
+  if (uniqueOrigins.includes(origin)) return true;
+  try {
+    const urlObj = new URL(origin);
+    const hostname = urlObj.hostname;
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.") ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".vercel.app") ||
+      hostname.endsWith(".railway.app")
+    );
+  } catch {
+    return false;
+  }
+}
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, etc.)
-      if (!origin) {
+      if (!origin || isOriginAllowed(origin)) {
         callback(null, true);
-        return;
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
       }
-      if (uniqueOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      if (isDev) {
-        try {
-          const hostname = new URL(origin).hostname;
-          const isLocal =
-            hostname === "localhost" ||
-            hostname === "127.0.0.1" ||
-            hostname.startsWith("192.168.") ||
-            hostname.startsWith("10.") ||
-            hostname.startsWith("172.") ||
-            hostname.endsWith(".local");
-          if (isLocal) {
-            callback(null, true);
-            return;
-          }
-        } catch {
-          // ignore parsing error
-        }
-      }
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     methods: ["GET", "POST"],
     credentials: true,
@@ -62,6 +58,15 @@ app.use(express.json({ limit: "10kb" }));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", uptimeSeconds: process.uptime() });
+});
+
+app.get("/api/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    queueSize: getQueueSize(),
+    activeRooms: getActiveRoomsCount(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Frontend fetches this once on load to build its RTCPeerConnection config,
@@ -77,35 +82,14 @@ app.get("/api/online-count", (_req, res) => {
 const httpServer = createServer(app);
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
+  connectTimeout: 10000,
   cors: {
     origin: (origin, callback) => {
-      if (!origin) {
+      if (!origin || isOriginAllowed(origin)) {
         callback(null, true);
-        return;
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
       }
-      if (uniqueOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      if (isDev) {
-        try {
-          const hostname = new URL(origin).hostname;
-          const isLocal =
-            hostname === "localhost" ||
-            hostname === "127.0.0.1" ||
-            hostname.startsWith("192.168.") ||
-            hostname.startsWith("10.") ||
-            hostname.startsWith("172.") ||
-            hostname.endsWith(".local");
-          if (isLocal) {
-            callback(null, true);
-            return;
-          }
-        } catch {
-          // ignore parsing error
-        }
-      }
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     methods: ["GET", "POST"],
     credentials: true,
