@@ -92,7 +92,7 @@ export function useWebRTC() {
 
     pcPromise = (async () => {
       const iceServers = await fetchIceServers();
-      const pc = new RTCPeerConnection({ iceServers });
+      const pc = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: 10 });
 
       const stream = localStream.value;
       if (stream) {

@@ -104,7 +104,7 @@ export function useGroupWebRTC() {
     hasRemoteDescMap.set(targetSocketId, false);
 
     const iceServers = await fetchIceServers();
-    const pc = new RTCPeerConnection({ iceServers });
+    const pc = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: 10 });
 
     // Add local tracks to connection
     if (localStream.value) {
