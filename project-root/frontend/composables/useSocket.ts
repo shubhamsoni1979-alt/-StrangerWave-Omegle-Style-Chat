@@ -21,6 +21,8 @@ export function useSocket() {
       url = `https://${url}`;
     }
 
+    console.log("[Socket] Connecting to backend at:", url);
+
     socketInstance =
       socketInstance ??
       io(url, {
