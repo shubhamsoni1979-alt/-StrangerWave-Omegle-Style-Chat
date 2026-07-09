@@ -80,15 +80,19 @@ export function useMatchmaking() {
     socket.off("error-message");
     socket.off("rate-limited");
     socket.off("online-count");
+    socket.off("queue-status");
+    socket.off("matched");
+    socket.off("no-match-available");
 
     socket.on("connect", () => {
       // Re-enqueue automatically on connect/reconnect if we were searching in the UI.
       // This prevents the user from being dropped from the queue silently during connection hops or transport fallbacks.
-      if (connectionStore.status === "queued") {
+      if (connectionStore.status === "queued" || connectionStore.status === "media-ready") {
         socket.emit("find-partner", {
           name: userStore.userName,
           country: userStore.userCountry,
           flag: userStore.userFlag,
+          deviceType: connectionStore.deviceType,
         });
       }
     });
@@ -157,6 +161,20 @@ export function useMatchmaking() {
       connectionStore.setOnlineCount(count);
     });
 
+    socket.on("queue-status", (data) => {
+      connectionStore.setQueueStatus(data.size, data.myPosition);
+    });
+
+    socket.on("matched", (payload) => {
+      console.log("[Socket] matched event received in console:", payload);
+    });
+
+    socket.on("no-match-available", () => {
+      console.warn("No match available received from server.");
+      clearMatchTimeout();
+      connectionStore.setError("No matches found. Want to try again?");
+    });
+
     chat.bindListeners();
     listenersBound = true;
   }
@@ -170,14 +188,25 @@ export function useMatchmaking() {
       console.warn("Failed to get local media, proceeding as text-only/receiver-only:", err);
       connectionStore.setStatus("media-ready");
     }
+
+    if (typeof window !== "undefined") {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      connectionStore.setDeviceType(isMobile ? "mobile" : "desktop");
+    }
+
     bindListeners();
     const socket = connect();
-    socket.emit("find-partner", {
-      name: userStore.userName,
-      country: userStore.userCountry,
-      flag: userStore.userFlag,
-    });
     connectionStore.setQueued();
+
+    if (socket.connected) {
+      socket.emit("find-partner", {
+        name: userStore.userName,
+        country: userStore.userCountry,
+        flag: userStore.userFlag,
+        deviceType: connectionStore.deviceType,
+      });
+    }
+
     startMatchTimeout();
   }
 
@@ -212,6 +241,9 @@ export function useMatchmaking() {
     socket.off("error-message");
     socket.off("rate-limited");
     socket.off("online-count");
+    socket.off("queue-status");
+    socket.off("matched");
+    socket.off("no-match-available");
     
     // Also clean up useChat listeners
     socket.off("receive-message");

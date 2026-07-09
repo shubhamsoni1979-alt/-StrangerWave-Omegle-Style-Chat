@@ -146,8 +146,16 @@ onBeforeUnmount(() => {
           class="h-10 w-10 text-[#6C63FF]"
           :class="{ 'animate-spin': isSearching }"
         />
-        <p class="text-sm select-none font-medium tracking-wide">
-          {{ isSearching ? "Looking for someone to talk to..." : "Not connected yet" }}
+        <p class="text-sm select-none font-medium tracking-wide px-6 text-center leading-relaxed">
+          <template v-if="isSearching">
+            Looking for someone to talk to...
+            <span v-if="connectionStore.queuePosition" class="block text-xs text-neutral-500 mt-1.5 font-semibold">
+              You're #{{ connectionStore.queuePosition }} in queue ({{ connectionStore.queueSize }} total waiting)
+            </span>
+          </template>
+          <template v-else>
+            Not connected yet
+          </template>
         </p>
       </template>
     </div>

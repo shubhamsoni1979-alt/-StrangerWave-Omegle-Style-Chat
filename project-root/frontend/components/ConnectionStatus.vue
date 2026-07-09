@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
+import { useConnectionStore } from "~/stores/connection";
+
 const isOnline = ref(false);
 const isReconnecting = ref(false);
 const { connect } = useSocket();
+const connectionStore = useConnectionStore();
 
 let socket: ReturnType<typeof connect> | null = null;
 
@@ -42,7 +45,7 @@ onBeforeUnmount(() => {
       class="h-2 w-2 rounded-full"
       :class="isOnline ? 'bg-green-500' : isReconnecting ? 'bg-amber-500 animate-pulse' : 'bg-red-500'"
     />
-    <span>{{ isOnline ? "Connected to server" : isReconnecting ? "Reconnecting…" : "Disconnected" }}</span>
+    <span>{{ isOnline ? `Connected to server (${connectionStore.deviceType})` : isReconnecting ? "Reconnecting…" : "Disconnected" }}</span>
     <button
       v-if="!isOnline && !isReconnecting"
       type="button"

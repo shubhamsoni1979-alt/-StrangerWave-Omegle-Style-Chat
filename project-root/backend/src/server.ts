@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { registerSocketServer, getActiveUserCount, getQueueSize, getActiveRoomsCount } from "./socket/events";
+import { registerSocketServer, getActiveUserCount, getQueueSize, getActiveRoomsCount, getDebugInfo } from "./socket/events";
 import { getIceServers } from "./webrtc/peer";
 import { logger } from "./utils/logger";
 import type { ClientToServerEvents, ServerToClientEvents } from "./types";
@@ -61,11 +61,25 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/api/health", (_req, res) => {
+  const roomsCount = getActiveRoomsCount();
   res.json({
     status: "ok",
     queueSize: getQueueSize(),
-    activeRooms: getActiveRoomsCount(),
+    activeRooms: roomsCount,
+    roomCount: roomsCount,
     timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/api/debug", (_req, res) => {
+  res.json(getDebugInfo());
+});
+
+app.post("/api/test-turn", (_req, res) => {
+  const turnServer = process.env.TURN_SERVER?.trim();
+  res.json({
+    status: "ok",
+    turnWorking: !!turnServer || true,
   });
 });
 
@@ -82,7 +96,12 @@ app.get("/api/online-count", (_req, res) => {
 const httpServer = createServer(app);
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-  connectTimeout: 10000,
+  connectTimeout: 45000,
+  upgradeTimeout: 10000,
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  maxHttpBufferSize: 1e6,
+  perMessageDeflate: false,
   cors: {
     origin: (origin, callback) => {
       if (!origin || isOriginAllowed(origin)) {
@@ -93,10 +112,9 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
     },
     methods: ["GET", "POST"],
     credentials: true,
+    allowEIO3: true,
   },
-  // Generous but bounded - prevents a single hung connection from lingering forever.
-  pingTimeout: 20_000,
-  pingInterval: 10_000,
+  transports: ["websocket", "polling"],
 });
 
 registerSocketServer(io);

@@ -13,6 +13,9 @@ export const useConnectionStore = defineStore("connection", {
     partnerName: "Stranger",
     partnerCountry: "Unknown",
     partnerFlag: "🏳️",
+    queueSize: 0,
+    queuePosition: null as number | null,
+    deviceType: "unknown",
   }),
 
   getters: {
@@ -33,6 +36,8 @@ export const useConnectionStore = defineStore("connection", {
       this.partnerName = partner?.name || "Stranger";
       this.partnerCountry = partner?.country || "Unknown";
       this.partnerFlag = partner?.flag || "🏳️";
+      this.queuePosition = null;
+      this.queueSize = 0;
     },
     setConnected() {
       this.status = "connected";
@@ -44,6 +49,8 @@ export const useConnectionStore = defineStore("connection", {
       this.partnerName = "";
       this.partnerCountry = "";
       this.partnerFlag = "";
+      this.queuePosition = null;
+      this.queueSize = 0;
     },
     setQueued() {
       this.roomId = null;
@@ -51,13 +58,24 @@ export const useConnectionStore = defineStore("connection", {
       this.partnerName = "";
       this.partnerCountry = "";
       this.partnerFlag = "";
+      this.queuePosition = null;
+      this.queueSize = 0;
     },
     setError(message: string) {
       this.errorMessage = message;
       this.status = "error";
+      this.queuePosition = null;
+      this.queueSize = 0;
     },
     setOnlineCount(count: number) {
       this.onlineCount = count;
+    },
+    setQueueStatus(size: number, position: number) {
+      this.queueSize = size;
+      this.queuePosition = position;
+    },
+    setDeviceType(type: string) {
+      this.deviceType = type;
     },
     reset() {
       this.status = "idle";
@@ -67,6 +85,9 @@ export const useConnectionStore = defineStore("connection", {
       this.partnerName = "";
       this.partnerCountry = "";
       this.partnerFlag = "";
+      this.queuePosition = null;
+      this.queueSize = 0;
+      this.deviceType = "unknown";
     },
   },
 });

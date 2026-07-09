@@ -19,6 +19,7 @@ export interface SessionUser {
   name?: string;
   country?: string;
   countryFlag?: string;
+  deviceType?: string;
 }
 
 export interface ChatRoom {
@@ -29,7 +30,7 @@ export interface ChatRoom {
 
 /** Client -> Server events */
 export interface ClientToServerEvents {
-  "find-partner": (payload?: { name: string; country: string; flag: string }) => void;
+  "find-partner": (payload?: { name: string; country: string; flag: string; deviceType?: string }) => void;
   "next-partner": () => void;
   "leave-chat": () => void;
 
@@ -82,6 +83,10 @@ export interface ServerToClientEvents {
   "receive-group-message": (payload: { fromSocketId: string; fromUserId: string; text: string; at: number }) => void;
   "incoming-group-call": (payload: { roomCode: string }) => void;
   "online-count": (payload: { count: number }) => void;
+
+  "queue-status": (payload: { size: number; myPosition: number }) => void;
+  matched: (payload: { roomId: string; partnerId: string; initiator: boolean; timestamp: number }) => void;
+  "no-match-available": () => void;
 }
 
 /** Minimal shape we accept over the wire - avoids depending on DOM lib types in a Node project */

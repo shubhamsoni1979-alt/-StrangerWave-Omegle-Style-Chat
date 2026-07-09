@@ -29,11 +29,12 @@ type AppServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
 const FIND_PARTNER_LIMIT = Number(process.env.MAX_FIND_PARTNER_PER_10S ?? 10);
 const MESSAGE_LIMIT = Number(process.env.MAX_MESSAGES_PER_10S ?? 15);
-const QUEUE_MATCH_INTERVAL_MS = Number(process.env.QUEUE_MATCH_INTERVAL_MS ?? 500);
-const STALE_SOCKET_TIMEOUT_MS = Number(process.env.STALE_SOCKET_TIMEOUT_MS ?? 30000);
+const QUEUE_MATCH_INTERVAL_MS = Number(process.env.QUEUE_MATCH_INTERVAL_MS ?? 300);
+const STALE_SOCKET_TIMEOUT_MS = Number(process.env.STALE_SOCKET_TIMEOUT_MS ?? 15000);
 
 let activeUserCount = 0;
 let matchmakerInstance: Matchmaker | null = null;
+let usersMap: Map<string, SessionUser> | null = null;
 
 export function getActiveUserCount(): number {
   return activeUserCount;
@@ -47,10 +48,20 @@ export function getActiveRoomsCount(): number {
   return matchmakerInstance?.activeRoomsCount() ?? 0;
 }
 
+export function getDebugInfo() {
+  return {
+    connectedSockets: usersMap?.size ?? 0,
+    queued: matchmakerInstance?.queueSize() ?? 0,
+    inRooms: (matchmakerInstance?.activeRoomsCount() ?? 0) * 2,
+    matcherRunning: true,
+  };
+}
+
 export function registerSocketServer(io: AppServer): void {
   const matchmaker = new Matchmaker();
   matchmakerInstance = matchmaker;
   const users = new Map<string, SessionUser>();
+  usersMap = users;
   const groupRooms = new Map<string, { code: string; memberIds: string[] }>();
   const userIdToSocketId = new Map<string, string>();
 
@@ -129,10 +140,21 @@ export function registerSocketServer(io: AppServer): void {
   /** Backstop sweep: in case a queued partner only becomes matchable later
    *  (e.g. the only other waiting user was their immediate last partner). */
   const matchSweep = setInterval(() => {
+    logger.debug(`Matcher sweep: ${matchmaker.queueSize()} in queue, attempting match`);
     const queuedIds = matchmaker.getQueueSnapshot();
     for (const socketId of queuedIds) {
       const socket = io.sockets.sockets.get(socketId) as AppSocket | undefined;
       if (socket) tryMatchFor(socket);
+    }
+
+    // Emit queue position updates to all users still in the queue
+    const remainingQueuedIds = matchmaker.getQueueSnapshot();
+    for (let i = 0; i < remainingQueuedIds.length; i++) {
+      const socketId = remainingQueuedIds[i];
+      io.to(socketId).emit("queue-status", {
+        size: remainingQueuedIds.length,
+        myPosition: i + 1,
+      });
     }
   }, QUEUE_MATCH_INTERVAL_MS);
 
@@ -142,6 +164,17 @@ export function registerSocketServer(io: AppServer): void {
     for (const [socketId, user] of users.entries()) {
       if (now - user.lastSeenAt > STALE_SOCKET_TIMEOUT_MS && !isSocketLive(socketId)) {
         cleanupUser(socketId);
+        continue;
+      }
+
+      // Emit 'no-match-available' to sockets that have been queued for >30 seconds
+      if (user.queuedAt && now - user.queuedAt > 30000) {
+        if (matchmaker.isQueued(socketId)) {
+          matchmaker.removeFromQueue(socketId);
+          user.queuedAt = null;
+          io.to(socketId).emit("no-match-available");
+          logger.info("match timeout reached - emitted no-match-available", { socketId });
+        }
       }
     }
   }, STALE_SOCKET_TIMEOUT_MS);

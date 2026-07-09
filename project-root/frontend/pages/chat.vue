@@ -10,6 +10,12 @@ const connectionStore = useConnectionStore();
 const chatStore = useChatStore();
 const toast = useToast();
 
+useHead({
+  bodyAttrs: {
+    class: "overflow-hidden w-full h-full select-none"
+  }
+});
+
 const matchmaking = useMatchmaking();
 const localStream = matchmaking.localStream;
 const remoteStream = matchmaking.remoteStream;
